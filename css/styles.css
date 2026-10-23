@@ -78,10 +78,3 @@ body {
   background: var(--panel-border);
 }
 
-.tool-btn .key {
-  position: absolute;
-  right: 3px;
-  bottom: 1px;
-  font-size: 9px;
-  opacity: 0.5;
-}
