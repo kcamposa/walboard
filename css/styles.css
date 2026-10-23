@@ -72,6 +72,21 @@ body {
   height: 20px;
 }
 
+.text-editor {
+  position: fixed;
+  z-index: 5;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: 1px dashed var(--accent);
+  outline-offset: 4px;
+  background: transparent;
+  font-family: var(--font-hand);
+  white-space: pre;
+  overflow: hidden;
+  resize: none;
+}
+
 .tool-separator {
   width: 1px;
   margin: 6px 2px;

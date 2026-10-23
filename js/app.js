@@ -25,6 +25,7 @@ window.WB = window.WB || {};
     tool: "select",
     elements: [],
     drawing: null, // element currently being drawn
+    textEditor: null, // open text editor, if any
   };
 
   WB.createToolbar(document.getElementById("toolbar"), (tool) => {
@@ -38,7 +39,12 @@ window.WB = window.WB || {};
   }
 
   canvas.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0 || !DRAW_TOOLS.includes(state.tool)) return;
+    if (e.button !== 0) return;
+    if (state.tool === "text") {
+      startText(toScene(e));
+      return;
+    }
+    if (!DRAW_TOOLS.includes(state.tool)) return;
     const p = toScene(e);
     state.drawing = WB.createElement(state.tool, p.x, p.y);
     canvas.setPointerCapture(e.pointerId);
@@ -90,6 +96,29 @@ window.WB = window.WB || {};
     if (BOX_TOOLS.includes(el.type)) WB.normalizeElement(el);
     if (!isTooSmall(el)) state.elements.push(el);
     requestRender();
+  }
+
+  // Opens the text editor at the clicked point. If one is already open, this click only closes it
+  function startText(p) {
+    if (state.textEditor) {
+      state.textEditor.commit();
+      return;
+    }
+    const el = WB.createElement("text", p.x, p.y);
+    state.textEditor = WB.openTextEditor({
+      x: p.x,
+      y: p.y,
+      fontSize: el.fontSize,
+      color: el.strokeColor,
+      onCommit(text) {
+        state.textEditor = null;
+        if (!text.trim()) return;
+        el.text = text;
+        Object.assign(el, WB.measureText(text, el.fontSize));
+        state.elements.push(el);
+        requestRender();
+      },
+    });
   }
 
   canvas.addEventListener("pointerup", finishDrawing);

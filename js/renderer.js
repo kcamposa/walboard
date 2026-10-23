@@ -37,6 +37,9 @@ function drawElement(ctx, el) {
     case "elbowArrow":
       drawSketchyLine(ctx, el);
       break;
+    case "text":
+      drawText(ctx, el);
+      break;
     case "pencil":
       // Same overlapping hand-drawn strokes as the other shapes
       ctx.lineWidth = el.strokeWidth * 0.75;
@@ -89,6 +92,18 @@ function drawInfraShape(ctx, el) {
       else WB.traceSketchyPath(ctx, part.points, seed, pass);
       ctx.stroke();
     }
+  });
+}
+
+function drawText(ctx, el) {
+  const lineHeight = el.fontSize * WB.LINE_HEIGHT;
+  ctx.font = `${el.fontSize}px ${WB.getFontFamily()}`;
+  ctx.fillStyle = el.strokeColor;
+  ctx.textBaseline = "top";
+  // The editor centers each line inside its line height; the canvas does the same so the text does not jump
+  const offset = (lineHeight - el.fontSize) / 2;
+  el.text.split("\n").forEach((line, i) => {
+    ctx.fillText(line, el.x, el.y + offset + i * lineHeight);
   });
 }
 

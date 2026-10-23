@@ -12,6 +12,19 @@ WB.getFontFamily = function () {
   return getComputedStyle(document.documentElement).getPropertyValue("--font-hand").trim();
 };
 
+WB.DEFAULT_FONT_SIZE = 20;
+
+// Width and height a text takes on the canvas
+const measureCtx = document.createElement("canvas").getContext("2d");
+WB.measureText = function (text, fontSize) {
+  measureCtx.font = `${fontSize}px ${WB.getFontFamily()}`;
+  const lines = text.split("\n");
+  return {
+    width: Math.max(...lines.map((line) => measureCtx.measureText(line).width)),
+    height: lines.length * fontSize * WB.LINE_HEIGHT,
+  };
+};
+
 let nextId = 1;
 
 // Types drawn with a list of points instead of a box
@@ -32,6 +45,10 @@ WB.createElement = function (type, x, y) {
   };
   const extra = WB.EXTRA_SHAPES[type];
   if (extra && extra.fillColor) el.fillColor = extra.fillColor;
+  if (type === "text") {
+    el.text = "";
+    el.fontSize = WB.DEFAULT_FONT_SIZE;
+  }
   if (WB.LINEAR_TYPES.includes(type)) {
     // Points relative to (x, y). Lines and arrows: start and end. Pencil: the whole path.
     el.points = type === "pencil" ? [[0, 0]] : [[0, 0], [0, 0]];
