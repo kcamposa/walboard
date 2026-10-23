@@ -14,8 +14,11 @@ WB.getFontFamily = function () {
 
 let nextId = 1;
 
+// Tipos que se dibujan con una lista de puntos en lugar de un recuadro
+WB.LINEAR_TYPES = ["line", "arrow", "pencil"];
+
 WB.createElement = function (type, x, y) {
-  return {
+  const el = {
     id: `el-${Date.now()}-${nextId++}`,
     type,
     x,
@@ -25,6 +28,11 @@ WB.createElement = function (type, x, y) {
     seed: Math.floor(Math.random() * 2 ** 31), // fija la forma del trazo a mano
     ...WB.DEFAULT_STYLE,
   };
+  if (WB.LINEAR_TYPES.includes(type)) {
+    // Puntos relativos a (x, y). Línea y flecha: inicio y fin. Lápiz: todo el recorrido.
+    el.points = type === "pencil" ? [[0, 0]] : [[0, 0], [0, 0]];
+  }
+  return el;
 };
 
 // Convierte ancho/alto negativos (arrastre hacia arriba o la izquierda) en positivos
