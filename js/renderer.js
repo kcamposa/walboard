@@ -40,8 +40,9 @@ function drawElement(ctx, el) {
       ctx.stroke();
       break;
     default:
-      // Rectangle, ellipse, polygons and other box shapes
-      drawSketchyShape(ctx, el);
+      // Box shapes: rectangle, ellipse, polygons, special and infrastructure shapes
+      if (WB.INFRA_SHAPES[el.type]) drawInfraShape(ctx, el);
+      else drawSketchyShape(ctx, el);
   }
 
   ctx.restore();
@@ -62,6 +63,24 @@ function drawSketchyShape(ctx, el) {
   WB.shapeDetails(box).forEach((points, i) => {
     for (let pass = 0; pass < WB.SKETCH_PASSES; pass++) {
       WB.traceSketchyPath(ctx, points, el.seed + (i + 1) * 104729, pass);
+      ctx.stroke();
+    }
+  });
+}
+
+function drawInfraShape(ctx, el) {
+  const parts = WB.infraParts(normalized(el));
+  const body = parts.find((part) => part.closed);
+  if (body && el.fillColor !== "transparent") {
+    WB.traceSketchyClosed(ctx, body.points, el.seed);
+    ctx.fill();
+  }
+  ctx.lineWidth = el.strokeWidth * 0.75;
+  parts.forEach((part, i) => {
+    const seed = el.seed + i * 104729;
+    for (let pass = 0; pass < WB.SKETCH_PASSES; pass++) {
+      if (part.closed) WB.traceSketchyClosed(ctx, part.points, seed, pass);
+      else WB.traceSketchyPath(ctx, part.points, seed, pass);
       ctx.stroke();
     }
   });

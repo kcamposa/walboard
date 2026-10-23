@@ -15,6 +15,7 @@ const SEGMENT_LENGTH = 24; // distance between points on straight sides
 const CORNER_STEPS = 6; // points per rounded corner
 const MAX_CORNER_RADIUS = 32;
 const MAX_POLYGON_RADIUS = 10;
+const INFRA_CORNER_RADIUS = 8;
 const WOBBLE = 2.2; // maximum wave offset, in pixels
 const WAVE_LENGTH = 90; // approximate distance between waves
 const JITTER = 0.35; // fine jitter, in pixels
@@ -22,8 +23,9 @@ const END_TAPER = 20; // on open lines, the offset fades out near the ends
 WB.SKETCH_PASSES = 2; // number of overlapping strokes
 
 // Points along the outline of a rectangle with rounded corners (clockwise)
-function roundedRectOutline(x, y, w, h) {
-  const r = Math.min(MAX_CORNER_RADIUS, w * 0.25, h * 0.25);
+// maxRadius / ratio: corner radius limits (absolute and relative to the shorter side)
+function roundedRectOutline(x, y, w, h, maxRadius = MAX_CORNER_RADIUS, ratio = 0.25) {
+  const r = Math.min(maxRadius, w * ratio, h * ratio);
   const points = [];
 
   function edge(x1, y1, x2, y2) {
@@ -283,6 +285,38 @@ WB.shapeDetails = function (el) {
     return [[[x + w, fy], [fx, fy], [fx, y + h]]];
   }
   return [];
+};
+
+// Converts the parts of an infrastructure shape (box from 0 to 1) into absolute point lists.
+// Returns [{ closed, points }]
+WB.infraParts = function (el) {
+  const { x, y, width: w, height: h } = el;
+  const px = (ux) => x + ux * w;
+  const py = (uy) => y + uy * h;
+  const toAbs = (list) => list.map(([ux, uy]) => [px(ux), py(uy)]);
+
+  return WB.INFRA_SHAPES[el.type].parts.map((part) => {
+    if (part.rect) {
+      const [rx, ry, rw, rh] = part.rect;
+      return { closed: true, points: roundedRectOutline(px(rx), py(ry), rw * w, rh * h, INFRA_CORNER_RADIUS, 0.12) };
+    }
+    if (part.ellipse) {
+      const [cx, cy, rx, ry] = part.ellipse;
+      return { closed: true, points: ellipseOutline(px(cx - rx), py(cy - ry), rx * 2 * w, ry * 2 * h) };
+    }
+    if (part.poly) return { closed: true, points: polygonOutline(x, y, w, h, part.poly) };
+    if (part.arc) {
+      const [cx, cy, rx, ry, from, to] = part.arc;
+      return { closed: false, points: arcPoints(px(cx), py(cy), rx * w, ry * h, from, to) };
+    }
+    return { closed: false, points: toAbs(part.path) };
+  });
+};
+
+// Hand-drawn closed outline through absolute points
+WB.traceSketchyClosed = function (ctx, points, seed, pass = 0) {
+  const random = WB.createRandom(seed + pass * 7919);
+  traceClosedCurve(ctx, wobble(points, random, true));
 };
 
 // Hand-drawn outline of a box shape (the box must have positive width and height).

@@ -6,7 +6,13 @@ window.WB = window.WB || {};
   const ctx = canvas.getContext("2d");
 
   // Tools drawn by dragging a box
-  const BOX_TOOLS = ["rectangle", "ellipse", ...Object.keys(WB.POLYGON_SHAPES), ...Object.keys(WB.EXTRA_SHAPES)];
+  const BOX_TOOLS = [
+    "rectangle",
+    "ellipse",
+    ...Object.keys(WB.POLYGON_SHAPES),
+    ...Object.keys(WB.EXTRA_SHAPES),
+    ...Object.keys(WB.INFRA_SHAPES),
+  ];
   const DRAW_TOOLS = [...BOX_TOOLS, ...WB.LINEAR_TYPES];
   // Below this size it counts as a click without dragging and is discarded
   const MIN_SIZE = 3;

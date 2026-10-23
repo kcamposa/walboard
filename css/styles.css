@@ -97,8 +97,23 @@ body {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
+.shape-menu.wide {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  min-width: 340px;
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+}
+
 .shape-menu[hidden] {
   display: none;
+}
+
+.shape-menu-heading {
+  grid-column: 1 / -1;
+  padding: 8px 8px 2px;
+  font-size: 13px;
+  opacity: 0.55;
 }
 
 .shape-item {
