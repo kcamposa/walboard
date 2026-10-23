@@ -1,8 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.png" />
-    <img src="docs/images/logo.png" alt="Walboard" width="420" />
-  </picture>
+  <img src="docs/images/logo.png" alt="Walboard" width="420" />
 </p>
 
 <p align="center">
