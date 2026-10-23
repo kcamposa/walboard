@@ -11,10 +11,10 @@
 </p>
 
 <p align="center">
-  <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-0-0f766e?style=for-the-badge" />
+  <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-0-0071dc?style=for-the-badge" />
   <img alt="Vanilla JavaScript" src="https://img.shields.io/badge/javascript-vanilla-f7df1e?style=for-the-badge&logo=javascript&logoColor=black" />
-  <img alt="No build step" src="https://img.shields.io/badge/build-none-4b5563?style=for-the-badge" />
-  <img alt="Works offline" src="https://img.shields.io/badge/works-offline-2563c9?style=for-the-badge" />
+  <img alt="No build step" src="https://img.shields.io/badge/build-none-041e42?style=for-the-badge" />
+  <img alt="Works offline" src="https://img.shields.io/badge/works-offline-ffc220?style=for-the-badge" />
 </p>
 
 <p align="center">
@@ -63,7 +63,7 @@ experience (see [Browser support](#-browser-support)).
 | ➡️ **Lines & arrows** | Line, arrow, double arrow and elbow arrow (right-angled), plus a freehand pencil. |
 | 🔤 **Text everywhere** | Free text anywhere, or double-click any shape to write inside it. Text wraps to the shape and moves with it. |
 | 🅱️ **Text formatting** | Sizes S / M / L / XL, **bold**, *italic*, underline and ~~strikethrough~~, left / center / right alignment, and position inside the shape (top, middle, bottom) or as a caption below it. Format while you type. |
-| 🎨 **Colors** | 14 stroke colors and 14 soft backgrounds, a color picker, and hex codes (`#2563c9`, or the short `#f0a`). Pick a color before drawing, or recolor a selection. |
+| 🎨 **Colors** | 14 stroke colors and 14 soft backgrounds — Walmart blue, yellow and navy first — each with its name on hover, a color picker, and hex codes (`#2563c9`, or the short `#f0a`). Pick a color before drawing, or recolor a selection. |
 | ✋ **Editing** | Select, box-select, Shift-click to add, move, resize from the corners, delete, and up to 100 steps of undo / redo. |
 | 🔍 **Infinite canvas** | Pan with the mouse wheel, two fingers or the Hand tool; zoom from 10% to 500% with pinch or the zoom buttons. |
 | 🗂️ **Canvases panel** | Keep many boards side by side, like chats in a sidebar: create, rename, search, delete and switch. Each one shows when it was created and last edited. |
