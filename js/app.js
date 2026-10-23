@@ -34,6 +34,32 @@ window.WB = window.WB || {};
   };
   let renderQueued = false; // declared before the toolbar, which triggers a render when created
 
+  const history = WB.createHistory(state.elements);
+  const undoButton = document.getElementById("undo");
+  const redoButton = document.getElementById("redo");
+
+  // Call after every finished change, so it can be undone
+  function recordHistory() {
+    history.record(state.elements);
+    updateHistoryButtons();
+  }
+
+  function updateHistoryButtons() {
+    undoButton.disabled = !history.canUndo();
+    redoButton.disabled = !history.canRedo();
+  }
+
+  function restore(elements) {
+    state.elements = elements;
+    // Keep only the selected elements that still exist
+    state.selectedIds = new Set(elements.filter((el) => state.selectedIds.has(el.id)).map((el) => el.id));
+    updateHistoryButtons();
+    requestRender();
+  }
+
+  undoButton.addEventListener("click", () => restore(history.undo()));
+  redoButton.addEventListener("click", () => restore(history.redo()));
+
   WB.createToolbar(document.getElementById("toolbar"), (tool) => {
     state.tool = tool;
     canvas.style.cursor = tool === "select" ? "default" : "crosshair";
@@ -87,6 +113,7 @@ window.WB = window.WB || {};
     if (state.drawing) finishDrawing();
     if (state.drag) {
       state.drag = null;
+      recordHistory();
       requestRender();
     }
   }
@@ -139,7 +166,10 @@ window.WB = window.WB || {};
     const el = state.drawing;
     state.drawing = null;
     if (BOX_TOOLS.includes(el.type)) WB.normalizeElement(el);
-    if (!isTooSmall(el)) state.elements.push(el);
+    if (!isTooSmall(el)) {
+      state.elements.push(el);
+      recordHistory();
+    }
     requestRender();
   }
 
@@ -237,6 +267,7 @@ window.WB = window.WB || {};
   deleteButton.addEventListener("click", () => {
     state.elements = state.elements.filter((el) => !state.selectedIds.has(el.id));
     state.selectedIds.clear();
+    recordHistory();
     requestRender();
   });
 
@@ -284,6 +315,7 @@ window.WB = window.WB || {};
           state.elements = state.elements.filter((item) => item !== el);
           state.selectedIds.delete(el.id);
         }
+        recordHistory();
         requestRender();
       },
     });

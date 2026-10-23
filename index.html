@@ -10,6 +10,18 @@
   <body>
     <div id="toolbar" class="toolbar" role="toolbar" aria-label="Tools"></div>
     <canvas id="board"></canvas>
+    <div class="history-bar">
+      <button id="undo" class="tool-btn" title="Undo" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 14L4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-3" />
+        </svg>
+      </button>
+      <button id="redo" class="tool-btn" title="Redo" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 14l5-5-5-5" /><path d="M20 9H9a5 5 0 0 0 0 10h3" />
+        </svg>
+      </button>
+    </div>
     <button id="delete-selection" class="floating-btn" title="Delete" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
@@ -22,6 +34,7 @@
     <script src="js/geometry.js"></script>
     <script src="js/sketch.js"></script>
     <script src="js/renderer.js"></script>
+    <script src="js/history.js"></script>
     <script src="js/textEditor.js"></script>
     <script src="js/toolbar.js"></script>
     <script src="js/app.js"></script>
