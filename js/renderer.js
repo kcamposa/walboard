@@ -1,4 +1,4 @@
-// Dibuja el fondo y todos los elementos en el canvas.
+// Draws the background and all elements on the canvas.
 window.WB = window.WB || {};
 
 const ARROW_HEAD_LENGTH = 18;
@@ -10,7 +10,7 @@ WB.renderScene = function (ctx, width, height, elements) {
   ctx.fillStyle = styles.getPropertyValue("--bg");
   ctx.fillRect(0, 0, width, height);
 
-  // Cuadrícula de puntos como guía visual
+  // Dot grid as a visual guide
   const gap = 20;
   ctx.fillStyle = styles.getPropertyValue("--grid-dot");
   for (let x = gap; x < width; x += gap) {
@@ -40,7 +40,7 @@ function drawElement(ctx, el) {
       ctx.stroke();
       break;
     default:
-      // Rectángulo, elipse y polígonos
+      // Rectangle, ellipse, polygons and other box shapes
       drawSketchyShape(ctx, el);
   }
 
@@ -53,7 +53,7 @@ function drawSketchyShape(ctx, el) {
     WB.traceSketchyShape(ctx, box);
     ctx.fill();
   }
-  // Trazos superpuestos y algo más finos: juntos dan el grosor desparejo de una línea a mano
+  // Overlapping, slightly thinner strokes: together they give the uneven weight of a hand-drawn line
   ctx.lineWidth = el.strokeWidth * 0.75;
   for (let pass = 0; pass < WB.SKETCH_PASSES; pass++) {
     WB.traceSketchyShape(ctx, box, pass);
@@ -90,12 +90,12 @@ function drawSketchyLine(ctx, el) {
   });
 }
 
-// Los puntos de líneas y lápiz se guardan relativos a (x, y); acá se pasan a coordenadas del lienzo
+// Line and pencil points are stored relative to (x, y); here they are converted to canvas coordinates
 function absolutePoints(el) {
   return el.points.map(([px, py]) => [el.x + px, el.y + py]);
 }
 
-// Copia con ancho y alto positivos, para dibujar mientras se arrastra en cualquier dirección
+// Copy with positive width and height, to draw while dragging in any direction
 function normalized(el) {
   return WB.normalizeElement({ ...el });
 }

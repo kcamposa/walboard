@@ -1,8 +1,8 @@
-// Estilo "a mano": genera contornos con pequeñas irregularidades.
-// Cada elemento tiene una semilla fija, así su trazo no cambia entre dibujados.
+// Hand-drawn style: builds outlines with small irregularities.
+// Each element has a fixed seed, so its stroke does not change between renders.
 window.WB = window.WB || {};
 
-// Generador pseudoaleatorio con semilla (congruencial lineal): devuelve números entre 0 y 1
+// Seeded pseudo-random generator (linear congruential): returns numbers between 0 and 1
 WB.createRandom = function (seed) {
   let s = seed >>> 0;
   return function () {
@@ -11,17 +11,17 @@ WB.createRandom = function (seed) {
   };
 };
 
-const SEGMENT_LENGTH = 24; // distancia entre puntos en los lados rectos
-const CORNER_STEPS = 6; // puntos por esquina redondeada
+const SEGMENT_LENGTH = 24; // distance between points on straight sides
+const CORNER_STEPS = 6; // points per rounded corner
 const MAX_CORNER_RADIUS = 32;
 const MAX_POLYGON_RADIUS = 10;
-const WOBBLE = 2.2; // desvío máximo de las ondulaciones, en píxeles
-const WAVE_LENGTH = 90; // distancia aproximada entre ondulaciones
-const JITTER = 0.35; // temblor fino, en píxeles
-const END_TAPER = 20; // en líneas abiertas, el desvío se reduce cerca de los extremos
-WB.SKETCH_PASSES = 2; // cantidad de trazos superpuestos
+const WOBBLE = 2.2; // maximum wave offset, in pixels
+const WAVE_LENGTH = 90; // approximate distance between waves
+const JITTER = 0.35; // fine jitter, in pixels
+const END_TAPER = 20; // on open lines, the offset fades out near the ends
+WB.SKETCH_PASSES = 2; // number of overlapping strokes
 
-// Puntos a lo largo del contorno de un rectángulo con esquinas redondeadas (sentido horario)
+// Points along the outline of a rectangle with rounded corners (clockwise)
 function roundedRectOutline(x, y, w, h) {
   const r = Math.min(MAX_CORNER_RADIUS, w * 0.25, h * 0.25);
   const points = [];
@@ -52,7 +52,7 @@ function roundedRectOutline(x, y, w, h) {
   return points;
 }
 
-// Puntos a lo largo del contorno de un polígono (vértices de 0 a 1), con las puntas levemente redondeadas
+// Points along the outline of a polygon (vertices from 0 to 1), with slightly rounded tips
 function polygonOutline(x, y, w, h, vertices) {
   const corners = vertices.map(([vx, vy]) => [x + vx * w, y + vy * h]);
   const count = corners.length;
@@ -66,7 +66,7 @@ function polygonOutline(x, y, w, h, vertices) {
     const lenOut = Math.hypot(next[0] - curr[0], next[1] - curr[1]) || 1;
     const r = Math.min(MAX_POLYGON_RADIUS, lenIn * 0.2, lenOut * 0.2);
 
-    // Punta: curva desde un poco antes del vértice hasta un poco después
+    // Tip: curve from just before the vertex to just after it
     const from = [curr[0] - ((curr[0] - prev[0]) / lenIn) * r, curr[1] - ((curr[1] - prev[1]) / lenIn) * r];
     const to = [curr[0] + ((next[0] - curr[0]) / lenOut) * r, curr[1] + ((next[1] - curr[1]) / lenOut) * r];
     for (let s = 0; s < CORNER_STEPS; s++) {
@@ -78,7 +78,7 @@ function polygonOutline(x, y, w, h, vertices) {
       ]);
     }
 
-    // Lado recto hasta la próxima punta
+    // Straight side up to the next tip
     const sideEnd = [next[0] - ((next[0] - curr[0]) / lenOut) * r, next[1] - ((next[1] - curr[1]) / lenOut) * r];
     const n = Math.max(1, Math.round(Math.hypot(sideEnd[0] - to[0], sideEnd[1] - to[1]) / SEGMENT_LENGTH));
     for (let s = 0; s < n; s++) {
@@ -88,7 +88,7 @@ function polygonOutline(x, y, w, h, vertices) {
   return points;
 }
 
-// Puntos a lo largo del contorno de una elipse inscrita en el recuadro
+// Points along the outline of an ellipse inscribed in the box
 function ellipseOutline(x, y, w, h) {
   const rx = w / 2;
   const ry = h / 2;
@@ -102,7 +102,7 @@ function ellipseOutline(x, y, w, h) {
   return points;
 }
 
-// Puntos intermedios a lo largo de una línea recta, para poder ondularla
+// Intermediate points along a straight line, so it can be made wavy
 function subdivide([x1, y1], [x2, y2]) {
   const n = Math.max(2, Math.round(Math.hypot(x2 - x1, y2 - y1) / SEGMENT_LENGTH));
   const points = [];
@@ -112,13 +112,13 @@ function subdivide([x1, y1], [x2, y2]) {
   return points;
 }
 
-// Desplaza cada punto hacia un lado u otro de la línea: ondulaciones suaves y un temblor fino.
-// closed: si el contorno es cerrado (rectángulo, elipse) o abierto (línea)
+// Shifts each point to one side of the line or the other: smooth waves plus fine jitter.
+// closed: whether the outline is closed (rectangle, ellipse) or open (line)
 function wobble(points, random, closed) {
   const count = points.length;
   const at = (i) => (closed ? points[(i + count) % count] : points[Math.min(count - 1, Math.max(0, i))]);
 
-  // Distancia recorrida hasta cada punto, para repartir las ondulaciones a lo largo del trazo
+  // Distance travelled up to each point, to spread the waves along the stroke
   const dist = [0];
   const segments = closed ? count : count - 1;
   for (let i = 1; i <= segments; i++) {
@@ -128,7 +128,7 @@ function wobble(points, random, closed) {
   }
   const total = dist[segments] || 1;
 
-  // Valores al azar en puntos de control; entre ellos se interpola con una curva suave
+  // Random values at control points; a smooth curve interpolates between them
   const knots = Math.max(closed ? 4 : 1, Math.round(total / WAVE_LENGTH));
   const amplitude = Math.min(WOBBLE, total / 80);
   const knotValues = Array.from({ length: closed ? knots : knots + 1 }, () => (random() * 2 - 1) * amplitude);
@@ -154,7 +154,7 @@ function wobble(points, random, closed) {
 
 const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
 
-// Traza una curva cerrada y suave que pasa entre los puntos dados
+// Traces a smooth closed curve through the given points
 function traceClosedCurve(ctx, points) {
   const count = points.length;
   const start = mid(points[count - 1], points[0]);
@@ -168,7 +168,7 @@ function traceClosedCurve(ctx, points) {
   ctx.closePath();
 }
 
-// Traza una curva abierta y suave que empieza en el primer punto y termina en el último
+// Traces a smooth open curve from the first point to the last one
 WB.traceOpenCurve = function (ctx, points) {
   ctx.beginPath();
   ctx.moveTo(points[0][0], points[0][1]);
@@ -180,7 +180,7 @@ WB.traceOpenCurve = function (ctx, points) {
   ctx.lineTo(last[0], last[1]);
 };
 
-// Puntos de un arco de elipse entre dos ángulos (incluye ambos extremos)
+// Points of an elliptical arc between two angles (both ends included)
 function arcPoints(cx, cy, rx, ry, fromAngle, toAngle) {
   const length = Math.abs(toAngle - fromAngle) * Math.max(rx, ry);
   const n = Math.max(6, Math.round(length / (SEGMENT_LENGTH * 0.6)));
@@ -192,12 +192,12 @@ function arcPoints(cx, cy, rx, ry, fromAngle, toAngle) {
   return points;
 }
 
-// Alto de las tapas del cilindro
+// Height of the cylinder caps
 function cylinderCapHeight(w, h) {
   return Math.min(h * 0.15, w * 0.25);
 }
 
-// Cilindro: tapa superior (mitad de atrás), lado derecho, base y lado izquierdo
+// Cylinder: top cap (back half), right side, bottom and left side
 function cylinderOutline(x, y, w, h) {
   const ry = cylinderCapHeight(w, h);
   const cx = x + w / 2;
@@ -208,10 +208,10 @@ function cylinderOutline(x, y, w, h) {
   return [...top, ...right, ...bottom, ...left];
 }
 
-// Nube: una elipse con bultos hacia afuera
+// Cloud: an ellipse with outward bumps
 function cloudOutline(x, y, w, h) {
   const bumps = 7;
-  const depth = 0.18; // qué tan marcados son los bultos
+  const depth = 0.18; // how pronounced the bumps are
   const n = bumps * 10;
   const points = [];
   for (let i = 0; i < n; i++) {
@@ -222,7 +222,7 @@ function cloudOutline(x, y, w, h) {
   return points;
 }
 
-// Globo de diálogo: rectángulo redondeado con una cola abajo a la izquierda
+// Speech bubble: rounded rectangle with a tail at the bottom left
 function speechBubbleOutline(x, y, w, h) {
   const bodyH = h * 0.78;
   const r = Math.min(MAX_CORNER_RADIUS, w * 0.2, bodyH * 0.25);
@@ -245,7 +245,7 @@ function speechBubbleOutline(x, y, w, h) {
   ];
 }
 
-// Nota adhesiva: cuadrado con la esquina inferior derecha doblada
+// Sticky note: square with the bottom-right corner folded
 const STICKY_FOLD = 0.2;
 const STICKY_VERTICES = [[0, 0], [1, 0], [1, 1 - STICKY_FOLD], [1 - STICKY_FOLD, 1], [0, 1]];
 
@@ -268,16 +268,16 @@ function shapeOutline(el) {
   return roundedRectOutline(x, y, w, h);
 }
 
-// Líneas interiores que completan algunas formas (no forman parte del contorno)
+// Inner lines that complete some shapes (not part of the outline)
 WB.shapeDetails = function (el) {
   const { x, y, width: w, height: h } = el;
   if (el.type === "cylinder") {
-    // Mitad de adelante de la tapa superior
+    // Front half of the top cap
     const ry = cylinderCapHeight(w, h);
     return [arcPoints(x + w / 2, y + ry, w / 2, ry, 0, Math.PI)];
   }
   if (el.type === "stickyNote") {
-    // Pliegue de la esquina doblada
+    // Crease of the folded corner
     const fx = x + w * (1 - STICKY_FOLD);
     const fy = y + h * (1 - STICKY_FOLD);
     return [[[x + w, fy], [fx, fy], [fx, y + h]]];
@@ -285,20 +285,20 @@ WB.shapeDetails = function (el) {
   return [];
 };
 
-// Contorno a mano de una forma de recuadro (el recuadro debe tener ancho y alto positivos).
-// pass: número de trazo (0, 1…); cada uno usa otra semilla para que no coincidan
+// Hand-drawn outline of a box shape (the box must have positive width and height).
+// pass: stroke number (0, 1…); each one uses another seed so they do not overlap exactly
 WB.traceSketchyShape = function (ctx, el, pass = 0) {
   const random = WB.createRandom(el.seed + pass * 7919);
   traceClosedCurve(ctx, wobble(shapeOutline(el), random, true));
 };
 
-// Línea recta a mano entre dos puntos absolutos
+// Hand-drawn straight line between two absolute points
 WB.traceSketchyLine = function (ctx, from, to, seed, pass = 0) {
   const random = WB.createRandom(seed + pass * 7919);
   WB.traceOpenCurve(ctx, wobble(subdivide(from, to), random, false));
 };
 
-// Recorrido abierto a mano por varios puntos (los tramos rectos se subdividen para poder ondularlos)
+// Hand-drawn open path through several points (straight segments are subdivided so they can be wavy)
 WB.traceSketchyPath = function (ctx, points, seed, pass = 0) {
   const random = WB.createRandom(seed + pass * 7919);
   const dense = [points[0]];

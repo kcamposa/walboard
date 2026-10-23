@@ -6,7 +6,7 @@
   --text: #1f1f1f;
   --accent: #0f766e;
   --accent-soft: #ccfbf1;
-  /* Fuente de toda la herramienta; las de respaldo son manuscritas del sistema */
+  /* Font for the whole tool; fallbacks are handwritten system fonts */
   --font-hand: "Excalifont", "Segoe Print", "Chalkboard", "Bradley Hand", cursive;
 }
 

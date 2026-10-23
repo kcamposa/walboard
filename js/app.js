@@ -1,24 +1,24 @@
-// Punto de entrada: prepara el lienzo, la barra de herramientas y el dibujo con el puntero.
+// Entry point: sets up the canvas, the toolbar and pointer drawing.
 window.WB = window.WB || {};
 
 (function () {
   const canvas = document.getElementById("board");
   const ctx = canvas.getContext("2d");
 
-  // Herramientas que se dibujan arrastrando un recuadro
+  // Tools drawn by dragging a box
   const BOX_TOOLS = ["rectangle", "ellipse", ...Object.keys(WB.POLYGON_SHAPES), ...Object.keys(WB.EXTRA_SHAPES)];
   const DRAW_TOOLS = [...BOX_TOOLS, ...WB.LINEAR_TYPES];
-  // Por debajo de este tamaño se considera un clic sin arrastre y se descarta
+  // Below this size it counts as a click without dragging and is discarded
   const MIN_SIZE = 3;
-  // El lápiz solo agrega un punto si el puntero se movió al menos esta distancia
+  // The pencil only adds a point if the pointer moved at least this far
   const PENCIL_MIN_STEP = 2;
-  // Con Shift, las líneas se ajustan a múltiplos de este ángulo
+  // With Shift, lines snap to multiples of this angle
   const SNAP_ANGLE = Math.PI / 12;
 
   const state = {
     tool: "select",
     elements: [],
-    drawing: null, // elemento que se está dibujando en este momento
+    drawing: null, // element currently being drawn
   };
 
   WB.createToolbar(document.getElementById("toolbar"), (tool) => {
@@ -26,7 +26,7 @@ window.WB = window.WB || {};
     canvas.style.cursor = tool === "select" ? "default" : "crosshair";
   });
 
-  // Por ahora coinciden pantalla y lienzo; con el zoom (paso 7) esto cambiará
+  // For now screen and canvas coordinates match; this will change with zoom (step 7)
   function toScene(e) {
     return { x: e.clientX, y: e.clientY };
   }
@@ -54,7 +54,7 @@ window.WB = window.WB || {};
     } else {
       el.width = dx;
       el.height = dy;
-      // Con Shift se mantiene la proporción: cuadrado o círculo
+      // With Shift the aspect ratio is kept: square or circle
       if (e.shiftKey) {
         const size = Math.max(Math.abs(el.width), Math.abs(el.height));
         el.width = Math.sign(el.width || 1) * size;
@@ -70,7 +70,7 @@ window.WB = window.WB || {};
     return [length * Math.cos(angle), length * Math.sin(angle)];
   }
 
-  // Un clic sin arrastre no debe dejar elementos invisibles
+  // A click without dragging must not leave invisible elements
   function isTooSmall(el) {
     if (el.type === "pencil") return el.points.length < 2;
     if (el.type === "line" || el.type === "arrow") return Math.hypot(...el.points[1]) < MIN_SIZE;
@@ -89,7 +89,7 @@ window.WB = window.WB || {};
   canvas.addEventListener("pointerup", finishDrawing);
   canvas.addEventListener("pointercancel", finishDrawing);
 
-  // Agrupa varios cambios en un solo dibujado por cuadro
+  // Batches several changes into a single render per frame
   let renderQueued = false;
   function requestRender() {
     if (renderQueued) return;
@@ -105,7 +105,7 @@ window.WB = window.WB || {};
     WB.renderScene(ctx, window.innerWidth, window.innerHeight, visible);
   }
 
-  // Ajusta el tamaño real del canvas a la pantalla (nítido en pantallas retina)
+  // Matches the canvas pixel size to the screen (sharp on retina displays)
   function resize() {
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.floor(window.innerWidth * dpr);
@@ -117,6 +117,6 @@ window.WB = window.WB || {};
   window.addEventListener("resize", resize);
   resize();
 
-  // El canvas no espera a las fuentes: se vuelve a dibujar cuando terminan de cargar
+  // The canvas does not wait for fonts: it re-renders once they finish loading
   document.fonts.load(`20px ${WB.getFontFamily()}`).then(requestRender);
 })();

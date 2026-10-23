@@ -1,7 +1,7 @@
-// Barra de herramientas: crea los botones y avisa cuando cambia la herramienta activa.
+// Toolbar: creates the buttons and reports when the active tool changes.
 window.WB = window.WB || {};
 
-// Ícono de un polígono de WB.POLYGON_SHAPES, dibujado dentro del área de 24×24
+// Icon for a polygon from WB.POLYGON_SHAPES, drawn inside the 24×24 area
 function polygonIcon(vertices) {
   const points = vertices.map(([x, y]) => `${(4 + x * 16).toFixed(1)},${(4 + y * 16).toFixed(1)}`).join(" ");
   return `<polygon points="${points}"/>`;
@@ -13,21 +13,21 @@ const POLYGON_TOOLS = Object.entries(WB.POLYGON_SHAPES).map(([id, shape]) => ({
   icon: polygonIcon(shape.vertices),
 }));
 
-// Herramientas agrupadas; entre grupos se dibuja un separador
+// Grouped tools; a separator is drawn between groups
 WB.TOOL_GROUPS = [
-  [{ id: "select", label: "Seleccionar", icon: '<path d="M5 3l14 8-6 2-3 6z"/>' }],
+  [{ id: "select", label: "Select", icon: '<path d="M5 3l14 8-6 2-3 6z"/>' }],
   [
-    { id: "rectangle", label: "Rectángulo", icon: '<rect x="4" y="5" width="16" height="14" rx="1"/>' },
-    { id: "ellipse", label: "Elipse", icon: '<ellipse cx="12" cy="12" rx="8" ry="6"/>' },
+    { id: "rectangle", label: "Rectangle", icon: '<rect x="4" y="5" width="16" height="14" rx="1"/>' },
+    { id: "ellipse", label: "Ellipse", icon: '<ellipse cx="12" cy="12" rx="8" ry="6"/>' },
     ...POLYGON_TOOLS,
   ],
   [
-    { id: "line", label: "Línea", icon: '<path d="M5 19L19 5"/>' },
-    { id: "arrow", label: "Flecha", icon: '<path d="M5 19L19 5M11 5h8v8"/>' },
+    { id: "line", label: "Line", icon: '<path d="M5 19L19 5"/>' },
+    { id: "arrow", label: "Arrow", icon: '<path d="M5 19L19 5M11 5h8v8"/>' },
   ],
   [
-    { id: "text", label: "Texto", icon: '<path d="M5 6h14M12 6v13"/>' },
-    { id: "pencil", label: "Lápiz", icon: '<path d="M4 17c3-6 5 2 8-4s5-2 8-6"/>' },
+    { id: "text", label: "Text", icon: '<path d="M5 6h14M12 6v13"/>' },
+    { id: "pencil", label: "Pencil", icon: '<path d="M4 17c3-6 5 2 8-4s5-2 8-6"/>' },
   ],
 ];
 
@@ -66,12 +66,12 @@ WB.createToolbar = function (container, onChange) {
     });
   });
 
-  // Botón "Más formas": abre un menú con las formas especiales
+  // "More shapes" button: opens a menu with the special shapes
   const moreWrap = document.createElement("div");
   moreWrap.className = "more-wrap";
   const moreBtn = document.createElement("button");
   moreBtn.className = "tool-btn";
-  moreBtn.title = "Más formas";
+  moreBtn.title = "More shapes";
   const menu = document.createElement("div");
   menu.className = "shape-menu";
   menu.hidden = true;
@@ -91,7 +91,7 @@ WB.createToolbar = function (container, onChange) {
   moreBtn.addEventListener("click", () => {
     menu.hidden = !menu.hidden;
   });
-  // Se cierra al hacer clic afuera
+  // Closes when clicking outside
   document.addEventListener("pointerdown", (e) => {
     if (!moreWrap.contains(e.target)) menu.hidden = true;
   });
@@ -106,7 +106,7 @@ WB.createToolbar = function (container, onChange) {
     Object.entries(buttons).forEach(([toolId, btn]) => {
       btn.classList.toggle("active", toolId === id);
     });
-    // Si la herramienta elegida es una forma especial, el botón muestra su ícono
+    // If the chosen tool is a special shape, the button shows its icon
     const extra = EXTRA_TOOLS.find((t) => t.id === id);
     moreBtn.classList.toggle("active", Boolean(extra));
     moreBtn.innerHTML = svgIcon(extra ? extra.icon : MORE_ICON);
