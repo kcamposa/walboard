@@ -28,6 +28,8 @@ WB.createElement = function (type, x, y) {
     seed: Math.floor(Math.random() * 2 ** 31), // fija la forma del trazo a mano
     ...WB.DEFAULT_STYLE,
   };
+  const extra = WB.EXTRA_SHAPES[type];
+  if (extra && extra.fillColor) el.fillColor = extra.fillColor;
   if (WB.LINEAR_TYPES.includes(type)) {
     // Puntos relativos a (x, y). Línea y flecha: inicio y fin. Lápiz: todo el recorrido.
     el.points = type === "pencil" ? [[0, 0]] : [[0, 0], [0, 0]];

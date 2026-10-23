@@ -78,3 +78,56 @@ body {
   background: var(--panel-border);
 }
 
+.more-wrap {
+  position: relative;
+}
+
+.shape-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 190px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.shape-menu[hidden] {
+  display: none;
+}
+
+.shape-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.shape-item:hover {
+  background: #f0f0ec;
+}
+
+.shape-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.shape-item svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+

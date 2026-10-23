@@ -59,6 +59,12 @@ function drawSketchyShape(ctx, el) {
     WB.traceSketchyShape(ctx, box, pass);
     ctx.stroke();
   }
+  WB.shapeDetails(box).forEach((points, i) => {
+    for (let pass = 0; pass < WB.SKETCH_PASSES; pass++) {
+      WB.traceSketchyPath(ctx, points, el.seed + (i + 1) * 104729, pass);
+      ctx.stroke();
+    }
+  });
 }
 
 function drawSketchyLine(ctx, el) {

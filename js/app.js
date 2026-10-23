@@ -6,7 +6,7 @@ window.WB = window.WB || {};
   const ctx = canvas.getContext("2d");
 
   // Herramientas que se dibujan arrastrando un recuadro
-  const BOX_TOOLS = ["rectangle", "ellipse", ...Object.keys(WB.POLYGON_SHAPES)];
+  const BOX_TOOLS = ["rectangle", "ellipse", ...Object.keys(WB.POLYGON_SHAPES), ...Object.keys(WB.EXTRA_SHAPES)];
   const DRAW_TOOLS = [...BOX_TOOLS, ...WB.LINEAR_TYPES];
   // Por debajo de este tamaño se considera un clic sin arrastre y se descarta
   const MIN_SIZE = 3;

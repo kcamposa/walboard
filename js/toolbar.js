@@ -33,6 +33,18 @@ WB.TOOL_GROUPS = [
 
 WB.TOOLS = WB.TOOL_GROUPS.flat();
 
+const MORE_ICON = '<rect x="4" y="4" width="6" height="6" rx="1"/><circle cx="17" cy="7" r="3"/><path d="M7 14l3 6H4zM14 14h6v6h-6z"/>';
+
+const EXTRA_TOOLS = Object.entries(WB.EXTRA_SHAPES).map(([id, shape]) => ({
+  id,
+  label: shape.label,
+  icon: shape.icon,
+}));
+
+function svgIcon(content) {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${content}</svg>`;
+}
+
 WB.createToolbar = function (container, onChange) {
   let active = WB.TOOLS[0].id;
   const buttons = {};
@@ -47,18 +59,57 @@ WB.createToolbar = function (container, onChange) {
       const btn = document.createElement("button");
       btn.className = "tool-btn";
       btn.title = tool.label;
-      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${tool.icon}</svg>`;
+      btn.innerHTML = svgIcon(tool.icon);
       btn.addEventListener("click", () => setActive(tool.id));
       container.appendChild(btn);
       buttons[tool.id] = btn;
     });
   });
 
+  // Botón "Más formas": abre un menú con las formas especiales
+  const moreWrap = document.createElement("div");
+  moreWrap.className = "more-wrap";
+  const moreBtn = document.createElement("button");
+  moreBtn.className = "tool-btn";
+  moreBtn.title = "Más formas";
+  const menu = document.createElement("div");
+  menu.className = "shape-menu";
+  menu.hidden = true;
+
+  EXTRA_TOOLS.forEach((tool) => {
+    const item = document.createElement("button");
+    item.className = "shape-item";
+    item.innerHTML = svgIcon(tool.icon) + `<span>${tool.label}</span>`;
+    item.addEventListener("click", () => {
+      menu.hidden = true;
+      setActive(tool.id);
+    });
+    menu.appendChild(item);
+    buttons[tool.id] = item;
+  });
+
+  moreBtn.addEventListener("click", () => {
+    menu.hidden = !menu.hidden;
+  });
+  // Se cierra al hacer clic afuera
+  document.addEventListener("pointerdown", (e) => {
+    if (!moreWrap.contains(e.target)) menu.hidden = true;
+  });
+
+  const separator = document.createElement("div");
+  separator.className = "tool-separator";
+  moreWrap.append(moreBtn, menu);
+  container.append(separator, moreWrap);
+
   function setActive(id) {
     active = id;
     Object.entries(buttons).forEach(([toolId, btn]) => {
       btn.classList.toggle("active", toolId === id);
     });
+    // Si la herramienta elegida es una forma especial, el botón muestra su ícono
+    const extra = EXTRA_TOOLS.find((t) => t.id === id);
+    moreBtn.classList.toggle("active", Boolean(extra));
+    moreBtn.innerHTML = svgIcon(extra ? extra.icon : MORE_ICON);
     onChange(id);
   }
 

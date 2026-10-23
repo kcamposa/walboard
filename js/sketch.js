@@ -180,12 +180,110 @@ WB.traceOpenCurve = function (ctx, points) {
   ctx.lineTo(last[0], last[1]);
 };
 
-function shapeOutline(el) {
-  if (el.type === "ellipse") return ellipseOutline(el.x, el.y, el.width, el.height);
-  const polygon = WB.POLYGON_SHAPES[el.type];
-  if (polygon) return polygonOutline(el.x, el.y, el.width, el.height, polygon.vertices);
-  return roundedRectOutline(el.x, el.y, el.width, el.height);
+// Puntos de un arco de elipse entre dos ángulos (incluye ambos extremos)
+function arcPoints(cx, cy, rx, ry, fromAngle, toAngle) {
+  const length = Math.abs(toAngle - fromAngle) * Math.max(rx, ry);
+  const n = Math.max(6, Math.round(length / (SEGMENT_LENGTH * 0.6)));
+  const points = [];
+  for (let i = 0; i <= n; i++) {
+    const a = fromAngle + ((toAngle - fromAngle) * i) / n;
+    points.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]);
+  }
+  return points;
 }
+
+// Alto de las tapas del cilindro
+function cylinderCapHeight(w, h) {
+  return Math.min(h * 0.15, w * 0.25);
+}
+
+// Cilindro: tapa superior (mitad de atrás), lado derecho, base y lado izquierdo
+function cylinderOutline(x, y, w, h) {
+  const ry = cylinderCapHeight(w, h);
+  const cx = x + w / 2;
+  const top = arcPoints(cx, y + ry, w / 2, ry, Math.PI, Math.PI * 2);
+  const right = subdivide([x + w, y + ry], [x + w, y + h - ry]).slice(1, -1);
+  const bottom = arcPoints(cx, y + h - ry, w / 2, ry, 0, Math.PI);
+  const left = subdivide([x, y + h - ry], [x, y + ry]).slice(1, -1);
+  return [...top, ...right, ...bottom, ...left];
+}
+
+// Nube: una elipse con bultos hacia afuera
+function cloudOutline(x, y, w, h) {
+  const bumps = 7;
+  const depth = 0.18; // qué tan marcados son los bultos
+  const n = bumps * 10;
+  const points = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const scale = 1 - depth + depth * Math.abs(Math.sin((a * bumps) / 2));
+    points.push([x + w / 2 + (w / 2) * scale * Math.cos(a), y + h / 2 + (h / 2) * scale * Math.sin(a)]);
+  }
+  return points;
+}
+
+// Globo de diálogo: rectángulo redondeado con una cola abajo a la izquierda
+function speechBubbleOutline(x, y, w, h) {
+  const bodyH = h * 0.78;
+  const r = Math.min(MAX_CORNER_RADIUS, w * 0.2, bodyH * 0.25);
+  const bottom = y + bodyH;
+  const tail = [
+    ...subdivide([x + w * 0.42, bottom], [x + w * 0.16, y + h]).slice(1),
+    ...subdivide([x + w * 0.16, y + h], [x + w * 0.24, bottom]).slice(1, -1),
+  ];
+  return [
+    ...subdivide([x + r, y], [x + w - r, y]).slice(0, -1),
+    ...arcPoints(x + w - r, y + r, r, r, -Math.PI / 2, 0).slice(0, -1),
+    ...subdivide([x + w, y + r], [x + w, bottom - r]).slice(0, -1),
+    ...arcPoints(x + w - r, bottom - r, r, r, 0, Math.PI / 2).slice(0, -1),
+    ...subdivide([x + w - r, bottom], [x + w * 0.42, bottom]).slice(0, -1),
+    ...tail,
+    ...subdivide([x + w * 0.24, bottom], [x + r, bottom]).slice(0, -1),
+    ...arcPoints(x + r, bottom - r, r, r, Math.PI / 2, Math.PI).slice(0, -1),
+    ...subdivide([x, bottom - r], [x, y + r]).slice(0, -1),
+    ...arcPoints(x + r, y + r, r, r, Math.PI, Math.PI * 1.5).slice(0, -1),
+  ];
+}
+
+// Nota adhesiva: cuadrado con la esquina inferior derecha doblada
+const STICKY_FOLD = 0.2;
+const STICKY_VERTICES = [[0, 0], [1, 0], [1, 1 - STICKY_FOLD], [1 - STICKY_FOLD, 1], [0, 1]];
+
+function shapeOutline(el) {
+  const { x, y, width: w, height: h } = el;
+  switch (el.type) {
+    case "ellipse":
+      return ellipseOutline(x, y, w, h);
+    case "cylinder":
+      return cylinderOutline(x, y, w, h);
+    case "cloud":
+      return cloudOutline(x, y, w, h);
+    case "speechBubble":
+      return speechBubbleOutline(x, y, w, h);
+    case "stickyNote":
+      return polygonOutline(x, y, w, h, STICKY_VERTICES);
+  }
+  const polygon = WB.POLYGON_SHAPES[el.type];
+  if (polygon) return polygonOutline(x, y, w, h, polygon.vertices);
+  return roundedRectOutline(x, y, w, h);
+}
+
+// Líneas interiores que completan algunas formas (no forman parte del contorno)
+WB.shapeDetails = function (el) {
+  const { x, y, width: w, height: h } = el;
+  if (el.type === "cylinder") {
+    // Mitad de adelante de la tapa superior
+    const ry = cylinderCapHeight(w, h);
+    return [arcPoints(x + w / 2, y + ry, w / 2, ry, 0, Math.PI)];
+  }
+  if (el.type === "stickyNote") {
+    // Pliegue de la esquina doblada
+    const fx = x + w * (1 - STICKY_FOLD);
+    const fy = y + h * (1 - STICKY_FOLD);
+    return [[[x + w, fy], [fx, fy], [fx, y + h]]];
+  }
+  return [];
+};
 
 // Contorno a mano de una forma de recuadro (el recuadro debe tener ancho y alto positivos).
 // pass: número de trazo (0, 1…); cada uno usa otra semilla para que no coincidan
@@ -198,4 +296,12 @@ WB.traceSketchyShape = function (ctx, el, pass = 0) {
 WB.traceSketchyLine = function (ctx, from, to, seed, pass = 0) {
   const random = WB.createRandom(seed + pass * 7919);
   WB.traceOpenCurve(ctx, wobble(subdivide(from, to), random, false));
+};
+
+// Recorrido abierto a mano por varios puntos (los tramos rectos se subdividen para poder ondularlos)
+WB.traceSketchyPath = function (ctx, points, seed, pass = 0) {
+  const random = WB.createRandom(seed + pass * 7919);
+  const dense = [points[0]];
+  for (let i = 1; i < points.length; i++) dense.push(...subdivide(points[i - 1], points[i]).slice(1));
+  WB.traceOpenCurve(ctx, wobble(dense, random, false));
 };
