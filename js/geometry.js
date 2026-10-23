@@ -131,9 +131,85 @@ WB.scaleElement = function (el, original, anchor, sx, sy) {
     el.points = original.points.map(([px, py]) => [px * sx, py * sy]);
   } else if (original.type === "text") {
     el.fontSize = Math.max(4, original.fontSize * sy);
-    Object.assign(el, WB.measureText(el.text, el.fontSize));
+    Object.assign(el, WB.measureText(el.text, el));
   } else {
     el.width = original.width * sx;
     el.height = original.height * sy;
   }
+};
+
+// ---- Text inside shapes (labels) ----
+
+const LABEL_PADDING = 10;
+const MIN_BELOW_WIDTH = 160; // labels below a shape can be wider than it
+// Part of the box (top, right, bottom, left) left empty so the text stays inside non-rectangular shapes
+const LABEL_INSETS = {
+  ellipse: [0.15, 0.15, 0.15, 0.15],
+  diamond: [0.25, 0.25, 0.25, 0.25],
+  triangle: [0.45, 0.22, 0.05, 0.22],
+  hexagon: [0.05, 0.15, 0.05, 0.15],
+  star: [0.32, 0.3, 0.25, 0.3],
+  parallelogram: [0, 0.18, 0, 0.18],
+  cloud: [0.18, 0.15, 0.18, 0.15],
+  speechBubble: [0, 0, 0.22, 0],
+  cylinder: [0.2, 0, 0.08, 0],
+  stickyNote: [0, 0, 0.12, 0],
+};
+
+// Area available for the label: inside the shape, or under it when the label goes below
+WB.labelArea = function (el) {
+  const b = WB.getBounds(el);
+  if ((el.verticalAlign || WB.defaultVerticalAlign(el)) === "below") {
+    const width = Math.max(b.width, MIN_BELOW_WIDTH);
+    return { x: b.x + b.width / 2 - width / 2, y: b.y + b.height + 8, width, height: 0 };
+  }
+  const [top, right, bottom, left] = WB.INFRA_SHAPES[el.type] ? [0, 0, 0, 0] : LABEL_INSETS[el.type] || [0, 0, 0, 0];
+  return {
+    x: b.x + b.width * left + LABEL_PADDING,
+    y: b.y + b.height * top + LABEL_PADDING,
+    width: Math.max(1, b.width * (1 - left - right) - LABEL_PADDING * 2),
+    height: Math.max(0, b.height * (1 - top - bottom) - LABEL_PADDING * 2),
+  };
+};
+
+// Top of a block of text of the given height inside the label area, following the vertical alignment
+WB.labelTop = function (el, area, textHeight) {
+  switch (el.verticalAlign || WB.defaultVerticalAlign(el)) {
+    case "top":
+    case "below":
+      return area.y;
+    case "bottom":
+      return area.y + area.height - textHeight;
+    default:
+      return area.y + (area.height - textHeight) / 2;
+  }
+};
+
+// Where each line of the label goes: { lines, x, y, width, lineHeight, align }
+WB.labelLayout = function (el) {
+  const area = WB.labelArea(el);
+  // Long words may use the whole width of the shape before being cut
+  const wordMaxWidth = Math.max(area.width, WB.getBounds(el).width - LABEL_PADDING * 2);
+  const lines = WB.wrapText(el.label, el, area.width, wordMaxWidth);
+  const lineHeight = el.fontSize * WB.LINE_HEIGHT;
+  return {
+    lines,
+    x: area.x,
+    y: WB.labelTop(el, area, lines.length * lineHeight),
+    width: area.width,
+    lineHeight,
+    align: el.textAlign || WB.defaultTextAlign(el),
+  };
+};
+
+// Bounds including the text below a shape (used when exporting, so it is not cut off)
+WB.getVisualBounds = function (el) {
+  const b = WB.getBounds(el);
+  if (!el.label || (el.verticalAlign || WB.defaultVerticalAlign(el)) !== "below") return b;
+  const layout = WB.labelLayout(el);
+  const x = Math.min(b.x, layout.x);
+  const y = Math.min(b.y, layout.y);
+  const right = Math.max(b.x + b.width, layout.x + layout.width);
+  const bottom = Math.max(b.y + b.height, layout.y + layout.lines.length * layout.lineHeight);
+  return { x, y, width: right - x, height: bottom - y };
 };

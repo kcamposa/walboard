@@ -13,15 +13,66 @@ WB.getFontFamily = function () {
 };
 
 WB.DEFAULT_FONT_SIZE = 20;
+WB.FONT_SIZES = { S: 16, M: 20, L: 28, XL: 36 };
+WB.FONT_STYLES = ["bold", "italic", "underline", "strike"]; // on / off flags of texts and labels
+
+// Shapes that can hold text inside (or below): every box shape
+WB.canHaveLabel = function (type) {
+  return !WB.LINEAR_TYPES.includes(type) && type !== "text";
+};
+
+// Default text position: centered inside the shape; infrastructure icons get it below, like a caption
+WB.defaultTextAlign = (el) => (el.type === "text" ? "left" : "center");
+WB.defaultVerticalAlign = (el) => (WB.INFRA_SHAPES[el.type] ? "below" : "middle");
+
+// Canvas font for an element: its size plus bold / italic
+WB.fontFor = function (el) {
+  return `${el.italic ? "italic " : ""}${el.bold ? "bold " : ""}${el.fontSize}px ${WB.getFontFamily()}`;
+};
+
+// Splits text into lines that fit in maxWidth, breaking between words. el: the element whose font is used.
+// A single word wider than maxWidth stays whole if it fits in wordMaxWidth (default: maxWidth); otherwise it is cut
+WB.wrapText = function (text, el, maxWidth, wordMaxWidth = maxWidth) {
+  measureCtx.font = WB.fontFor(el);
+  const fits = (line) => measureCtx.measureText(line).width <= maxWidth;
+  const wordFits = (word) => measureCtx.measureText(word).width <= wordMaxWidth;
+  const lines = [];
+  text.split("\n").forEach((paragraph) => {
+    let line = "";
+    paragraph.split(" ").forEach((word) => {
+      const candidate = line ? `${line} ${word}` : word;
+      if (fits(candidate)) {
+        line = candidate;
+        return;
+      }
+      if (line) lines.push(line);
+      line = "";
+      if (wordFits(word)) {
+        line = word;
+        return;
+      }
+      // A single word wider than the whole space is cut into pieces
+      for (const char of word) {
+        if (line && !fits(line + char)) {
+          lines.push(line);
+          line = "";
+        }
+        line += char;
+      }
+    });
+    lines.push(line);
+  });
+  return lines;
+};
 
 // Width and height a text takes on the canvas
 const measureCtx = document.createElement("canvas").getContext("2d");
-WB.measureText = function (text, fontSize) {
-  measureCtx.font = `${fontSize}px ${WB.getFontFamily()}`;
+WB.measureText = function (text, el) {
+  measureCtx.font = WB.fontFor(el);
   const lines = text.split("\n");
   return {
     width: Math.max(...lines.map((line) => measureCtx.measureText(line).width)),
-    height: lines.length * fontSize * WB.LINE_HEIGHT,
+    height: lines.length * el.fontSize * WB.LINE_HEIGHT,
   };
 };
 
@@ -59,8 +110,13 @@ WB.createElement = function (type, x, y, style = {}) {
   }
   if (type === "text") {
     el.text = "";
-    el.fontSize = WB.DEFAULT_FONT_SIZE;
+    el.fontSize = style.fontSize || WB.DEFAULT_FONT_SIZE;
+    el.textAlign = style.textAlign || "left";
   }
+  // Font styles chosen for the next text
+  WB.FONT_STYLES.forEach((key) => {
+    if (style[key] && (type === "text" || WB.canHaveLabel(type))) el[key] = true;
+  });
   if (WB.LINEAR_TYPES.includes(type)) {
     // Points relative to (x, y). Lines and arrows: start and end. Pencil: the whole path.
     el.points = type === "pencil" ? [[0, 0]] : [[0, 0], [0, 0]];

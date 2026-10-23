@@ -22,13 +22,97 @@ function normalizeHex(text) {
   return null;
 }
 
-// onChange(kind, color): kind is "strokeColor" or "fillColor"
+const TEXT_ALIGN_ICONS = {
+  left: '<path d="M4 6h16M4 10h10M4 14h16M4 18h10"/>',
+  center: '<path d="M4 6h16M7 10h10M4 14h16M7 18h10"/>',
+  right: '<path d="M4 6h16M10 10h10M4 14h16M10 18h10"/>',
+};
+const VERTICAL_ALIGN_ICONS = {
+  top: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8"/>',
+  middle: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12h8"/>',
+  bottom: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 16h8"/>',
+  below: '<rect x="4" y="3" width="16" height="12" rx="2"/><path d="M8 20h8"/>',
+};
+const VERTICAL_ALIGN_TITLES = { top: "Top", middle: "Middle", bottom: "Bottom", below: "Below the shape" };
+const FONT_STYLE_BUTTONS = [
+  { key: "bold", label: "B", title: "Bold" },
+  { key: "italic", label: "I", title: "Italic" },
+  { key: "underline", label: "U", title: "Underline" },
+  { key: "strike", label: "S", title: "Strikethrough" },
+];
+
+function panelIcon(content) {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${content}</svg>`;
+}
+
+// onChange(kind, value): kind is "strokeColor", "fillColor", "fontSize", "textAlign", "verticalAlign",
+// or a font style ("bold", "italic", "underline", "strike") with true / false
 WB.createStylePanel = function (container, onChange) {
   const rows = {
     strokeColor: createRow("Stroke", WB.STROKE_COLORS, "#1f1f1f"),
     fillColor: createRow("Background", WB.FILL_COLORS, "#fdf0a0"),
   };
-  container.append(rows.strokeColor.el, rows.fillColor.el);
+  const text = createTextSection();
+  container.append(rows.strokeColor.el, rows.fillColor.el, text.el);
+
+  // Text formatting: size, bold / italic / underline / strikethrough, alignment and position in the shape
+  function createTextSection() {
+    const el = document.createElement("div");
+    el.className = "style-row";
+    el.innerHTML = `<div class="style-label">Text</div>
+      <div class="option-group sizes"></div>
+      <div class="option-group font-styles"></div>
+      <div class="option-group aligns"></div>
+      <div class="option-group positions"></div>`;
+
+    const sizeButtons = Object.entries(WB.FONT_SIZES).map(([name, size]) =>
+      optionButton(el.querySelector(".sizes"), name, `Size ${name}`, () => onChange("fontSize", size), { size }),
+    );
+    let fontStyleValues = {};
+    const fontStyleButtons = FONT_STYLE_BUTTONS.map(({ key, label, title }) =>
+      // Toggles: turns the style on unless every selected text already has it
+      optionButton(el.querySelector(".font-styles"), label, title, () => onChange(key, fontStyleValues[key] !== true), {
+        style: key,
+      }),
+    );
+    const alignButtons = Object.entries(TEXT_ALIGN_ICONS).map(([align, icon]) =>
+      optionButton(el.querySelector(".aligns"), panelIcon(icon), `Align ${align}`, () => onChange("textAlign", align), { align }),
+    );
+    const positionsEl = el.querySelector(".positions");
+    const positionButtons = Object.entries(VERTICAL_ALIGN_ICONS).map(([position, icon]) =>
+      optionButton(positionsEl, panelIcon(icon), VERTICAL_ALIGN_TITLES[position], () => onChange("verticalAlign", position), {
+        position,
+      }),
+    );
+
+    const mark = (buttons, key, value) => buttons.forEach((b) => b.classList.toggle("active", b.dataset[key] === String(value)));
+
+    return {
+      el,
+      update(state) {
+        el.hidden = !state.showText;
+        if (!state.showText) return;
+        positionsEl.hidden = !state.showPosition;
+        mark(sizeButtons, "size", state.fontSize);
+        mark(alignButtons, "align", state.textAlign);
+        mark(positionButtons, "position", state.verticalAlign);
+        fontStyleValues = state.fontStyles;
+        fontStyleButtons.forEach((b) => b.classList.toggle("active", state.fontStyles[b.dataset.style] === true));
+      },
+    };
+  }
+
+  function optionButton(parent, content, title, onClick, data) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "option-btn";
+    button.title = title;
+    button.innerHTML = content;
+    Object.assign(button.dataset, data);
+    button.addEventListener("click", onClick);
+    parent.appendChild(button);
+    return button;
+  }
 
   // A labeled row of swatches plus a custom color picker
   function createRow(label, colors, pickerDefault) {
@@ -107,13 +191,16 @@ WB.createStylePanel = function (container, onChange) {
   }
 
   return {
-    // state: { visible, showFill, strokeColor, fillColor }; a color is null when the selection mixes several
+    // state: { visible, showFill, strokeColor, fillColor,
+    //          showText, showPosition, fontSize, textAlign, verticalAlign, fontStyles: { bold, ... } }
+    // A value is null when the selection mixes several
     update(state) {
       container.hidden = !state.visible;
       if (!state.visible) return;
       rows.fillColor.el.hidden = !state.showFill;
       rows.strokeColor.setValue(state.strokeColor);
       rows.fillColor.setValue(state.fillColor);
+      text.update(state);
     },
   };
 };

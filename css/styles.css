@@ -178,6 +178,12 @@ body {
   resize: none;
 }
 
+/* Text inside shapes: fixed width, breaking lines between words */
+.text-editor.wrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .tool-separator {
   width: 1px;
   margin: 6px 2px;
@@ -413,6 +419,9 @@ body.sidebar-hidden .sidebar {
   position: absolute;
   left: 12px;
   top: 72px;
+  /* Stays above the bottom bar; scrolls when it does not fit */
+  max-height: calc(100% - 72px - 72px);
+  overflow-y: auto;
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -511,3 +520,49 @@ body.sidebar-hidden .sidebar {
 .hex-field:focus-within {
   border-color: var(--accent);
 }
+
+.option-group {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.option-group[hidden] {
+  display: none;
+}
+
+.option-btn {
+  min-width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.option-btn:hover {
+  background: #f0f0ec;
+}
+
+.option-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.option-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* B I U S buttons show their own style */
+.option-btn[data-style="bold"] { font-weight: bold; }
+.option-btn[data-style="italic"] { font-style: italic; }
+.option-btn[data-style="underline"] { text-decoration: underline; }
+.option-btn[data-style="strike"] { text-decoration: line-through; }

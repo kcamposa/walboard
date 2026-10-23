@@ -35,7 +35,15 @@ const EXPORT_SCALE = 2; // exported images have twice the resolution, so they st
 
 // Draws the elements on a new canvas sized to fit them, with a white background and no grid
 WB.renderToImage = function (elements) {
-  const b = WB.getCommonBounds(elements);
+  const boxes = elements.map(WB.getVisualBounds);
+  const left = Math.min(...boxes.map((box) => box.x));
+  const top = Math.min(...boxes.map((box) => box.y));
+  const b = {
+    x: left,
+    y: top,
+    width: Math.max(...boxes.map((box) => box.x + box.width)) - left,
+    height: Math.max(...boxes.map((box) => box.y + box.height)) - top,
+  };
   const canvas = document.createElement("canvas");
   canvas.width = Math.ceil((b.width + EXPORT_PADDING * 2) * EXPORT_SCALE);
   canvas.height = Math.ceil((b.height + EXPORT_PADDING * 2) * EXPORT_SCALE);
@@ -130,6 +138,7 @@ function drawElement(ctx, el) {
       // Box shapes: rectangle, ellipse, polygons, special and infrastructure shapes
       if (WB.INFRA_SHAPES[el.type]) drawInfraShape(ctx, el);
       else drawSketchyShape(ctx, el);
+      if (el.label) drawLabel(ctx, el);
   }
 
   ctx.restore();
@@ -175,14 +184,44 @@ function drawInfraShape(ctx, el) {
 
 function drawText(ctx, el) {
   const lineHeight = el.fontSize * WB.LINE_HEIGHT;
-  ctx.font = `${el.fontSize}px ${WB.getFontFamily()}`;
+  drawTextLines(ctx, el, el.text.split("\n"), el.x, el.y, el.width, lineHeight, el.textAlign || "left");
+}
+
+// Text inside (or below) a shape
+function drawLabel(ctx, el) {
+  const layout = WB.labelLayout(el);
+  drawTextLines(ctx, el, layout.lines, layout.x, layout.y, layout.width, layout.lineHeight, layout.align);
+}
+
+// Draws lines of text in a column of the given width, with the element font, color and decorations
+function drawTextLines(ctx, el, lines, x, y, width, lineHeight, align) {
+  const size = el.fontSize;
+  ctx.font = WB.fontFor(el);
   ctx.fillStyle = el.strokeColor;
+  ctx.strokeStyle = el.strokeColor;
+  ctx.lineWidth = Math.max(1, size / 14);
   ctx.textBaseline = "top";
+  ctx.textAlign = "left";
   // The editor centers each line inside its line height; the canvas does the same so the text does not jump
-  const offset = (lineHeight - el.fontSize) / 2;
-  el.text.split("\n").forEach((line, i) => {
-    ctx.fillText(line, el.x, el.y + offset + i * lineHeight);
+  const offset = (lineHeight - size) / 2;
+
+  lines.forEach((line, i) => {
+    const lineWidth = ctx.measureText(line).width;
+    const left = align === "center" ? x + (width - lineWidth) / 2 : align === "right" ? x + width - lineWidth : x;
+    const top = y + offset + i * lineHeight;
+    ctx.fillText(line, left, top);
+    // The canvas has no underline / strikethrough: they are drawn as lines
+    if (el.underline) strokeLine(ctx, left, top + size * 0.95, lineWidth);
+    if (el.strike) strokeLine(ctx, left, top + size * 0.55, lineWidth);
   });
+}
+
+function strokeLine(ctx, x, y, width) {
+  if (!width) return;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + width, y);
+  ctx.stroke();
 }
 
 function drawSketchyLine(ctx, el) {

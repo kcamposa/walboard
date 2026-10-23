@@ -30,6 +30,8 @@ window.WB = window.WB || {};
     drawing: null, // element currently being drawn
     textEditor: null, // open text editor, if any
     editingId: null, // text element hidden while its editor is open
+    editingLabelId: null, // shape whose text is hidden while its editor is open
+    editingElement: null, // text or shape being typed into (can be a new text not on the canvas yet)
     selectedIds: new Set(),
     drag: null, // current select-tool drag: { mode: "move" | "resize" | "marquee", ... }
     pan: null, // last pointer position while moving the canvas
@@ -217,10 +219,12 @@ window.WB = window.WB || {};
     }
   }
 
-  // Double click on a text edits it
+  // Double click on a text edits it; on a shape, edits the text inside it
   canvas.addEventListener("dblclick", (e) => {
     const hit = WB.elementAt(state.elements, toScene(e));
-    if (hit && hit.type === "text") editText(hit);
+    if (!hit) return;
+    if (hit.type === "text") editText(hit);
+    else if (WB.canHaveLabel(hit.type)) editLabel(hit);
   });
 
   // ---- Drawing ----
@@ -372,37 +376,82 @@ window.WB = window.WB || {};
 
   // ---- Colors ----
 
-  // A color applies to the selected elements (background only to those that can have one),
-  // and is also used for the next elements drawn
-  const stylePanel = WB.createStylePanel(document.getElementById("style-panel"), (kind, color) => {
-    state.style[kind] = color;
-    const targets = selectedElements().filter((el) => kind === "strokeColor" || WB.isFillable(el.type));
-    if (targets.length) {
-      targets.forEach((el) => (el[kind] = color));
-      recordHistory();
-    }
+  const TEXT_FORMAT_KINDS = ["fontSize", "textAlign", "verticalAlign", ...WB.FONT_STYLES];
+  const stylePanelEl = document.getElementById("style-panel");
+
+  // A change in the panel applies to the selection and to the text being typed. With nothing to apply it to,
+  // it is kept for the next element drawn (colors are always kept: "the last color used")
+  const stylePanel = WB.createStylePanel(stylePanelEl, (kind, value) => {
+    const isText = TEXT_FORMAT_KINDS.includes(kind);
+    const canApply = (el) => {
+      if (kind === "fillColor") return WB.isFillable(el.type);
+      if (kind === "verticalAlign") return WB.canHaveLabel(el.type);
+      return !isText || el.type === "text" || WB.canHaveLabel(el.type);
+    };
+    const targets = styleTargets().filter(canApply);
+    if (!isText || !targets.length) state.style[kind] = value;
+    targets.forEach((el) => {
+      el[kind] = value;
+      if (el.type === "text" && el.text) Object.assign(el, WB.measureText(el.text, el));
+    });
+    if (state.textEditor && state.editingElement) state.textEditor.update(editorStyle(state.editingElement));
+    if (targets.some((el) => state.elements.includes(el))) recordHistory();
     requestRender();
   });
 
-  // The panel shows the colors of the selection, or the ones for the next element of the active tool
+  // The panel buttons do not take the focus away, so the text being typed can be formatted
+  stylePanelEl.addEventListener("mousedown", (e) => {
+    if (e.target.closest("button")) e.preventDefault();
+  });
+
+  // Selected elements plus the one being typed into
+  function styleTargets() {
+    const targets = selectedElements();
+    if (state.editingElement && !targets.includes(state.editingElement)) targets.push(state.editingElement);
+    return targets;
+  }
+
+  // The panel shows the style of the selection (and the text being typed), or the one for the next element
   function updateStylePanel(selection) {
+    const targets = styleTargets();
     const drawingTool = state.tool === "text" || DRAW_TOOLS.includes(state.tool);
-    if (selection.length) {
-      const fillable = selection.filter((el) => WB.isFillable(el.type));
-      stylePanel.update({
-        visible: true,
-        showFill: fillable.length > 0,
-        strokeColor: commonValue(selection, "strokeColor"),
-        fillColor: commonValue(fillable, "fillColor"),
-      });
-    } else {
+    if (!targets.length) {
       stylePanel.update({
         visible: drawingTool,
         showFill: WB.isFillable(state.tool),
         strokeColor: state.style.strokeColor,
         fillColor: state.style.fillColor,
+        // Text options for the next text
+        showText: state.tool === "text",
+        showPosition: false,
+        fontSize: state.style.fontSize || WB.DEFAULT_FONT_SIZE,
+        textAlign: state.style.textAlign || "left",
+        verticalAlign: null,
+        fontStyles: Object.fromEntries(WB.FONT_STYLES.map((key) => [key, Boolean(state.style[key])])),
       });
+      return;
     }
+    const fillable = targets.filter((el) => WB.isFillable(el.type));
+    // Texts, and shapes that have text (or are getting it now)
+    const texts = targets.filter((el) => el.type === "text" || el.label || el === state.editingElement);
+    const format = texts.map((el) => ({
+      fontSize: el.fontSize || WB.DEFAULT_FONT_SIZE,
+      textAlign: el.textAlign || WB.defaultTextAlign(el),
+      verticalAlign: el.type === "text" ? undefined : el.verticalAlign || WB.defaultVerticalAlign(el),
+      ...Object.fromEntries(WB.FONT_STYLES.map((key) => [key, Boolean(el[key])])),
+    }));
+    stylePanel.update({
+      visible: true,
+      showFill: fillable.length > 0,
+      strokeColor: commonValue(targets, "strokeColor"),
+      fillColor: commonValue(fillable, "fillColor"),
+      showText: texts.length > 0,
+      showPosition: texts.some((el) => el.type !== "text"),
+      fontSize: commonValue(format, "fontSize"),
+      textAlign: commonValue(format, "textAlign"),
+      verticalAlign: commonValue(format.filter((f) => f.verticalAlign), "verticalAlign"),
+      fontStyles: Object.fromEntries(WB.FONT_STYLES.map((key) => [key, commonValue(format, key)])),
+    });
   }
 
   // The value if every element has the same one, otherwise null
@@ -527,7 +576,7 @@ window.WB = window.WB || {};
 
   // ---- Text ----
 
-  // Clicking on an existing text edits it; anywhere else starts a new text.
+  // Clicking on an existing text edits it, on a shape edits the text inside it; anywhere else starts a new text.
   // If an editor is already open, this click only closes it
   function startText(p) {
     if (state.textEditor) {
@@ -537,6 +586,10 @@ window.WB = window.WB || {};
     const hit = WB.elementAt(state.elements, p);
     if (hit && hit.type === "text") {
       editText(hit);
+      return;
+    }
+    if (hit && WB.canHaveLabel(hit.type)) {
+      editLabel(hit);
       return;
     }
     const el = WB.createElement("text", p.x, p.y, state.style);
@@ -549,22 +602,73 @@ window.WB = window.WB || {};
     openEditor(el, () => {});
   }
 
+  // Look of the editor for an element: size (with the zoom), color, alignment and font styles
+  function editorStyle(el) {
+    return {
+      fontSize: el.fontSize * WB.view.zoom,
+      color: el.strokeColor,
+      align: el.textAlign || WB.defaultTextAlign(el),
+      ...Object.fromEntries(WB.FONT_STYLES.map((key) => [key, Boolean(el[key])])),
+    };
+  }
+
+  // Text inside a shape. The text area has the width of the shape and moves with the vertical alignment
+  function editLabel(el) {
+    if (state.textEditor) state.textEditor.commit();
+    // The first time a shape gets text, it takes the size and styles chosen for the next text
+    if (!el.fontSize) {
+      el.fontSize = state.style.fontSize || WB.DEFAULT_FONT_SIZE;
+      WB.FONT_STYLES.forEach((key) => {
+        if (state.style[key]) el[key] = true;
+      });
+    }
+    state.editingLabelId = el.id;
+    state.editingElement = el;
+    if (state.tool === "select") state.selectedIds = new Set([el.id]);
+
+    const place = (heightPx) => {
+      const area = WB.labelArea(el);
+      return toScreen(area.x, WB.labelTop(el, area, heightPx / WB.view.zoom));
+    };
+    const start = place(el.fontSize * WB.LINE_HEIGHT * WB.view.zoom);
+    state.textEditor = WB.openTextEditor({
+      container: stage,
+      x: start.x,
+      y: start.y,
+      width: WB.labelArea(el).width * WB.view.zoom,
+      text: el.label || "",
+      reposition: place,
+      ...editorStyle(el),
+      onCommit(text) {
+        state.textEditor = null;
+        state.editingLabelId = null;
+        state.editingElement = null;
+        if (text.trim()) el.label = text;
+        else delete el.label;
+        recordHistory();
+        requestRender();
+      },
+    });
+    requestRender();
+  }
+
   // onNew: what to do with the element if it has text and is not on the canvas yet
   function openEditor(el, onNew) {
     const position = toScreen(el.x, el.y);
+    state.editingElement = el;
     state.textEditor = WB.openTextEditor({
       container: stage,
       x: position.x,
       y: position.y,
-      fontSize: el.fontSize * WB.view.zoom,
-      color: el.strokeColor,
       text: el.text,
+      ...editorStyle(el),
       onCommit(text) {
         state.textEditor = null;
         state.editingId = null;
+        state.editingElement = null;
         if (text.trim()) {
           el.text = text;
-          Object.assign(el, WB.measureText(text, el.fontSize));
+          Object.assign(el, WB.measureText(text, el));
           if (!state.elements.includes(el)) onNew();
         } else {
           // Emptying a text deletes it
@@ -591,7 +695,10 @@ window.WB = window.WB || {};
   }
 
   function render() {
-    const visible = state.elements.filter((el) => el.id !== state.editingId);
+    // Texts being edited are hidden (the editor shows them); a shape being edited is drawn without its text
+    const visible = state.elements
+      .filter((el) => el.id !== state.editingId)
+      .map((el) => (el.id === state.editingLabelId ? { ...el, label: "" } : el));
     if (state.drawing) visible.push(state.drawing);
     const selection = state.tool === "select" ? selectedElements() : [];
     const screen = { width: stage.clientWidth, height: stage.clientHeight, dpr: window.devicePixelRatio || 1 };
