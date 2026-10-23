@@ -22,6 +22,7 @@ WB.createElement = function (type, x, y) {
     y,
     width: 0,
     height: 0,
+    seed: Math.floor(Math.random() * 2 ** 31), // fija la forma del trazo a mano
     ...WB.DEFAULT_STYLE,
   };
 };

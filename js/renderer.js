@@ -25,15 +25,20 @@ function drawElement(ctx, el) {
   ctx.fillStyle = el.fillColor;
   ctx.lineWidth = el.strokeWidth;
   ctx.lineJoin = "round";
+  ctx.lineCap = "round";
 
   switch (el.type) {
     case "rectangle":
-      ctx.beginPath();
-      ctx.rect(el.x, el.y, el.width, el.height);
+      WB.traceSketchyRect(ctx, normalized(el));
       if (el.fillColor !== "transparent") ctx.fill();
       ctx.stroke();
       break;
   }
 
   ctx.restore();
+}
+
+// Copia con ancho y alto positivos, para dibujar mientras se arrastra en cualquier dirección
+function normalized(el) {
+  return WB.normalizeElement({ ...el });
 }
