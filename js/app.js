@@ -1,7 +1,8 @@
-// Entry point: sets up the canvas, the toolbar, pointer drawing and selection.
+// Entry point: sets up the canvases panel, the drawing area, the toolbar, pointer drawing and selection.
 window.WB = window.WB || {};
 
 (function () {
+  const stage = document.getElementById("stage"); // drawing area, to the right of the canvases panel
   const canvas = document.getElementById("board");
   const ctx = canvas.getContext("2d");
   const deleteButton = document.getElementById("delete-selection");
@@ -35,22 +36,19 @@ window.WB = window.WB || {};
   };
   let renderQueued = false; // declared before the toolbar, which triggers a render when created
 
-  // Restore the drawing kept by the automatic save, if any
-  const autosaved = WB.loadAutosave();
-  if (autosaved) {
-    state.elements = autosaved.elements;
-    if (autosaved.view) Object.assign(WB.view, autosaved.view);
-  }
-
-  const history = WB.createHistory(state.elements);
+  const store = WB.canvasStore;
+  let currentId = store.init(); // open canvas
+  let history = null; // undo/redo history of the open canvas
   const undoButton = document.getElementById("undo");
   const redoButton = document.getElementById("redo");
 
-  // Call after every finished change, so it can be undone
+  // Call after every finished change: it can be undone, and the canvas is saved
   function recordHistory() {
-    history.record(state.elements);
+    if (history.record(state.elements)) {
+      store.save(currentId, state.elements, WB.view);
+      refreshSidebar();
+    }
     updateHistoryButtons();
-    WB.autosave(state.elements, WB.view);
   }
 
   function updateHistoryButtons() {
@@ -63,7 +61,8 @@ window.WB = window.WB || {};
     // Keep only the selected elements that still exist
     state.selectedIds = new Set(elements.filter((el) => state.selectedIds.has(el.id)).map((el) => el.id));
     updateHistoryButtons();
-    WB.autosave(state.elements, WB.view);
+    store.save(currentId, state.elements, WB.view);
+    refreshSidebar();
     requestRender();
   }
 
@@ -81,10 +80,19 @@ window.WB = window.WB || {};
     return { select: "default", hand: "grab" }[state.tool] || "crosshair";
   }
 
-  // Converts a pointer event position (screen) into scene coordinates
-  function toScene(e) {
-    return { x: e.clientX / WB.view.zoom + WB.view.x, y: e.clientY / WB.view.zoom + WB.view.y };
+  // Pointer event position relative to the drawing area
+  function toStage(e) {
+    const rect = stage.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
+
+  // Converts a pointer event position into scene coordinates
+  function toScene(e) {
+    const s = toStage(e);
+    return { x: s.x / WB.view.zoom + WB.view.x, y: s.y / WB.view.zoom + WB.view.y };
+  }
+
+  // Scene coordinates to a position inside the drawing area
 
   function toScreen(x, y) {
     return { x: (x - WB.view.x) * WB.view.zoom, y: (y - WB.view.y) * WB.view.zoom };
@@ -132,14 +140,15 @@ window.WB = window.WB || {};
     "wheel",
     (e) => {
       e.preventDefault();
-      if (e.ctrlKey) zoomTo(WB.view.zoom * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY);
+      const s = toStage(e);
+      if (e.ctrlKey) zoomTo(WB.view.zoom * Math.exp(-e.deltaY * 0.01), s.x, s.y);
       else panBy(e.deltaX, e.deltaY);
     },
     { passive: false },
   );
 
-  const centerX = () => window.innerWidth / 2;
-  const centerY = () => window.innerHeight / 2;
+  const centerX = () => stage.clientWidth / 2;
+  const centerY = () => stage.clientHeight / 2;
   document.getElementById("zoom-in").addEventListener("click", () => zoomTo(WB.view.zoom * ZOOM_STEP, centerX(), centerY()));
   document.getElementById("zoom-out").addEventListener("click", () => zoomTo(WB.view.zoom / ZOOM_STEP, centerX(), centerY()));
   zoomLabel.addEventListener("click", () => zoomTo(1, centerX(), centerY()));
@@ -362,8 +371,10 @@ window.WB = window.WB || {};
 
   // ---- Files ----
 
+  const currentName = () => (store.get(currentId) || {}).name;
+
   document.getElementById("save-file").addEventListener("click", () => {
-    WB.saveSceneFile(WB.serializeScene(state.elements, WB.view));
+    WB.saveSceneFile(WB.serializeScene(state.elements, WB.view), currentId, currentName());
   });
 
   // Exports the selection, or the whole drawing when nothing is selected
@@ -374,28 +385,100 @@ window.WB = window.WB || {};
       alert("There is nothing to export yet.");
       return;
     }
-    WB.exportPng(elements);
+    WB.exportPng(elements, currentName());
   });
 
-  // Opening a file replaces the drawing; it can be undone like any other change
+  // Opening a file creates a new canvas named after the file
   document.getElementById("open-file").addEventListener("click", async () => {
-    const text = await WB.openSceneFile();
-    if (text === null) return;
+    const file = await WB.openSceneFile();
+    if (!file) return;
     let scene;
     try {
-      scene = WB.parseScene(text);
+      scene = WB.parseScene(file.text);
     } catch (error) {
       alert(error.message);
       return;
     }
+    leaveCanvas();
+    openCanvas(store.create(file.name, scene).id);
+  });
+
+  // ---- Canvases ----
+
+  const sidebar = WB.createSidebar(document.getElementById("sidebar"), {
+    onCreate() {
+      leaveCanvas();
+      openCanvas(store.create().id);
+    },
+    onSelect(id) {
+      leaveCanvas();
+      openCanvas(id);
+    },
+    onRename(id, name) {
+      store.rename(id, name);
+      refreshSidebar();
+    },
+    // Deleting the open canvas opens the most recent one left (or a new empty one)
+    onDelete(id) {
+      if (id === currentId && state.textEditor) state.textEditor.commit();
+      store.remove(id);
+      if (id !== currentId) {
+        refreshSidebar();
+        return;
+      }
+      const next = store.list()[0] || store.create();
+      openCanvas(next.id);
+    },
+  });
+
+  function refreshSidebar() {
+    sidebar.update(store.list(), currentId);
+  }
+
+  // Before switching canvases: closes the text editor and keeps where the view was
+  function leaveCanvas() {
     if (state.textEditor) state.textEditor.commit();
+    store.save(currentId, state.elements, WB.view, false);
+  }
+
+  // Loads a canvas into the drawing area, with its own undo history
+  function openCanvas(id) {
+    const scene = store.load(id);
+    currentId = id;
+    store.setCurrentId(id);
     state.elements = scene.elements;
     state.selectedIds.clear();
-    if (scene.view) Object.assign(WB.view, scene.view);
+    state.drawing = null;
+    state.drag = null;
+    Object.assign(WB.view, { x: 0, y: 0, zoom: 1 }, scene.view);
+    history = WB.createHistory(state.elements);
+    updateHistoryButtons();
     updateZoomLabel();
-    recordHistory();
+    refreshSidebar();
     requestRender();
+  }
+
+  // The panel can be hidden to have more room to draw; the choice is remembered
+  const SIDEBAR_HIDDEN_KEY = "walboard:sidebar-hidden";
+  function setSidebarHidden(hidden) {
+    document.body.classList.toggle("sidebar-hidden", hidden);
+    try {
+      localStorage.setItem(SIDEBAR_HIDDEN_KEY, hidden ? "1" : "0");
+    } catch {
+      // not remembered, that is fine
+    }
+  }
+  document.getElementById("toggle-sidebar").addEventListener("click", () => {
+    setSidebarHidden(!document.body.classList.contains("sidebar-hidden"));
   });
+  try {
+    if (localStorage.getItem(SIDEBAR_HIDDEN_KEY) === "1") setSidebarHidden(true);
+  } catch {
+    // storage blocked: the panel starts visible
+  }
+
+  // The view (pan / zoom) is saved when leaving the page
+  window.addEventListener("pagehide", () => store.save(currentId, state.elements, WB.view, false));
 
   // ---- Text ----
 
@@ -425,6 +508,7 @@ window.WB = window.WB || {};
   function openEditor(el, onNew) {
     const position = toScreen(el.x, el.y);
     state.textEditor = WB.openTextEditor({
+      container: stage,
       x: position.x,
       y: position.y,
       fontSize: el.fontSize * WB.view.zoom,
@@ -465,7 +549,7 @@ window.WB = window.WB || {};
     const visible = state.elements.filter((el) => el.id !== state.editingId);
     if (state.drawing) visible.push(state.drawing);
     const selection = state.tool === "select" ? selectedElements() : [];
-    const screen = { width: window.innerWidth, height: window.innerHeight, dpr: window.devicePixelRatio || 1 };
+    const screen = { width: stage.clientWidth, height: stage.clientHeight, dpr: window.devicePixelRatio || 1 };
     WB.renderScene(ctx, screen, visible, {
       selection,
       marquee: state.drag && state.drag.mode === "marquee" ? state.drag.marquee : null,
@@ -484,21 +568,32 @@ window.WB = window.WB || {};
     const size = deleteButton.offsetWidth;
     let top = topLeft.y - size - 8;
     if (top < 64) top = bottomRight.y + 8;
-    const left = Math.min(Math.max(8, bottomRight.x - size), window.innerWidth - size - 8);
+    const left = Math.min(Math.max(8, bottomRight.x - size), stage.clientWidth - size - 8);
     deleteButton.style.left = `${left}px`;
     deleteButton.style.top = `${top}px`;
   }
 
-  // Matches the canvas pixel size to the screen (sharp on retina displays)
+  // Matches the canvas pixel size to the drawing area (sharp on retina displays)
   function resize() {
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.floor(window.innerWidth * dpr);
-    canvas.height = Math.floor(window.innerHeight * dpr);
+    canvas.width = Math.floor(stage.clientWidth * dpr);
+    canvas.height = Math.floor(stage.clientHeight * dpr);
+    placeToolbar();
     render();
   }
 
-  window.addEventListener("resize", resize);
-  updateZoomLabel();
+  // The toolbar is centered, unless that would put it over the file buttons
+  const toolbarEl = document.getElementById("toolbar");
+  const fileBar = document.querySelector(".file-bar");
+  function placeToolbar() {
+    const minLeft = fileBar.offsetLeft + fileBar.offsetWidth + 12;
+    const centeredLeft = (stage.clientWidth - toolbarEl.offsetWidth) / 2;
+    toolbarEl.style.left = `${Math.max(minLeft, centeredLeft)}px`;
+  }
+
+  // Resizes with the window and when the canvases panel is shown or hidden
+  new ResizeObserver(resize).observe(stage);
+  openCanvas(currentId);
   resize();
 
   // The canvas does not wait for fonts: it re-renders once they finish loading

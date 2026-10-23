@@ -4,7 +4,7 @@ window.WB = window.WB || {};
 
 WB.LINE_HEIGHT = 1.25; // relative to the font size
 
-// options: { x, y, fontSize, color, text, onCommit(text) }
+// options: { container, x, y, fontSize, color, text, onCommit(text) }; x / y are relative to the container
 WB.openTextEditor = function (options) {
   const textarea = document.createElement("textarea");
   textarea.className = "text-editor";
@@ -17,7 +17,7 @@ WB.openTextEditor = function (options) {
     lineHeight: String(WB.LINE_HEIGHT),
     color: options.color,
   });
-  document.body.appendChild(textarea);
+  options.container.appendChild(textarea);
 
   // Grows with the content, so the text never wraps or scrolls
   function autosize() {

@@ -8,6 +8,11 @@
   --accent-soft: #ccfbf1;
   /* Font for the whole tool; fallbacks are handwritten system fonts */
   --font-hand: "Excalifont", "Segoe Print", "Chalkboard", "Bradley Hand", cursive;
+  --sidebar-width: 260px;
+}
+
+body.sidebar-hidden {
+  --sidebar-width: 0px;
 }
 
 * {
@@ -24,17 +29,26 @@ body {
   font-family: var(--font-hand);
 }
 
+/* Drawing area: the space to the right of the canvases panel */
+.stage {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--sidebar-width);
+  overflow: hidden;
+}
+
 #board {
   display: block;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
 }
 
 .toolbar {
-  position: fixed;
+  position: absolute;
   top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0; /* set by placeToolbar() in app.js */
   display: flex;
   gap: 4px;
   padding: 4px;
@@ -88,7 +102,7 @@ body {
 }
 
 .file-bar {
-  position: fixed;
+  position: absolute;
   left: 12px;
   top: 12px;
   z-index: 10;
@@ -102,7 +116,7 @@ body {
 }
 
 .bottom-bar {
-  position: fixed;
+  position: absolute;
   left: 12px;
   bottom: 12px;
   z-index: 10;
@@ -122,7 +136,7 @@ body {
 }
 
 .floating-btn {
-  position: fixed;
+  position: absolute;
   z-index: 6;
   width: 34px;
   height: 34px;
@@ -150,7 +164,7 @@ body {
 }
 
 .text-editor {
-  position: fixed;
+  position: absolute;
   z-index: 5;
   margin: 0;
   padding: 0;
@@ -238,3 +252,154 @@ body {
   flex-shrink: 0;
 }
 
+/* ---- Canvases panel ---- */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 10px;
+  background: var(--panel);
+  border-right: 1px solid var(--panel-border);
+  overflow: hidden;
+}
+
+body.sidebar-hidden .sidebar {
+  display: none;
+}
+
+.sidebar-header {
+  padding: 2px 8px 6px;
+  font-size: 22px;
+}
+
+.new-canvas-btn {
+  padding: 8px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--accent);
+  font: inherit;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.new-canvas-btn:hover {
+  background: var(--accent-soft);
+}
+
+.canvas-search {
+  padding: 7px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+}
+
+.canvas-search:focus,
+.canvas-rename:focus {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.canvas-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+
+.canvas-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 6px 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.canvas-item:hover {
+  background: #f0f0ec;
+}
+
+.canvas-item.active {
+  background: var(--accent-soft);
+}
+
+.canvas-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.canvas-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 16px;
+}
+
+.canvas-item.active .canvas-name {
+  color: var(--accent);
+}
+
+.canvas-time {
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+.canvas-rename {
+  width: 100%;
+  padding: 2px 6px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 16px;
+}
+
+/* Rename and delete buttons appear on hover */
+.canvas-action {
+  width: 28px;
+  height: 28px;
+  display: none;
+  place-items: center;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.canvas-item:hover .canvas-action {
+  display: grid;
+}
+
+.canvas-action:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.canvas-action.danger {
+  color: #b42318;
+}
+
+.canvas-action svg {
+  width: 16px;
+  height: 16px;
+}
+
+.canvas-empty {
+  padding: 10px;
+  font-size: 14px;
+  opacity: 0.55;
+}
