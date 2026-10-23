@@ -7,6 +7,11 @@ WB.DEFAULT_STYLE = {
   strokeWidth: 2,
 };
 
+// Fuente de los textos del lienzo: se toma de la variable CSS --font-hand
+WB.getFontFamily = function () {
+  return getComputedStyle(document.documentElement).getPropertyValue("--font-hand").trim();
+};
+
 let nextId = 1;
 
 WB.createElement = function (type, x, y) {

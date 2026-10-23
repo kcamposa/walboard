@@ -91,4 +91,7 @@ window.WB = window.WB || {};
 
   window.addEventListener("resize", resize);
   resize();
+
+  // El canvas no espera a las fuentes: se vuelve a dibujar cuando terminan de cargar
+  document.fonts.load(`20px ${WB.getFontFamily()}`).then(requestRender);
 })();

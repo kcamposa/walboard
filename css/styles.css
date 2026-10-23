@@ -6,6 +6,8 @@
   --text: #1f1f1f;
   --accent: #0f766e;
   --accent-soft: #ccfbf1;
+  /* Fuente de toda la herramienta; las de respaldo son manuscritas del sistema */
+  --font-hand: "Excalifont", "Segoe Print", "Chalkboard", "Bradley Hand", cursive;
 }
 
 * {
@@ -19,7 +21,7 @@ body {
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-hand);
 }
 
 #board {
