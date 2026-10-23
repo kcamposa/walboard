@@ -74,13 +74,16 @@ WB.createSidebar = function (container, handlers) {
     return item;
   }
 
-  // Replaces the name with a text field; the new name is kept when the field loses focus
+  // Replaces the name with a text field; the new name is kept with Enter or when the field loses focus
   function startRename(c, nameEl) {
     const input = document.createElement("input");
     input.className = "canvas-rename";
     input.value = c.name;
     nameEl.replaceWith(input);
     input.addEventListener("click", (e) => e.stopPropagation());
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") input.blur();
+    });
     input.addEventListener("blur", () => {
       const name = input.value.trim();
       if (name && name !== c.name) handlers.onRename(c.id, name);
