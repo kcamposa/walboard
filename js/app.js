@@ -366,6 +366,17 @@ window.WB = window.WB || {};
     WB.saveSceneFile(WB.serializeScene(state.elements, WB.view));
   });
 
+  // Exports the selection, or the whole drawing when nothing is selected
+  document.getElementById("export-png").addEventListener("click", () => {
+    const selection = selectedElements();
+    const elements = selection.length ? selection : state.elements;
+    if (!elements.length) {
+      alert("There is nothing to export yet.");
+      return;
+    }
+    WB.exportPng(elements);
+  });
+
   // Opening a file replaces the drawing; it can be undone like any other change
   document.getElementById("open-file").addEventListener("click", async () => {
     const text = await WB.openSceneFile();

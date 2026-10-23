@@ -47,12 +47,22 @@ WB.saveSceneFile = async function (text) {
       currentFileHandle = null;
     }
   }
+  WB.downloadBlob(new Blob([text], { type: "application/json" }), `drawing${FILE_EXTENSION}`);
+  return true;
+};
+
+// Saves a blob through the browser's downloads
+WB.downloadBlob = function (blob, fileName) {
   const link = document.createElement("a");
-  link.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-  link.download = `drawing${FILE_EXTENSION}`;
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
   link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-  return true;
+};
+
+// Exports the elements as a PNG image
+WB.exportPng = function (elements) {
+  WB.renderToImage(elements).toBlob((blob) => WB.downloadBlob(blob, "drawing.png"), "image/png");
 };
 
 // Lets the user pick a file and resolves with its text (or null if cancelled)

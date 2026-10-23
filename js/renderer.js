@@ -30,6 +30,25 @@ WB.renderScene = function (ctx, screen, elements, overlay = {}) {
   if (overlay.marquee) drawMarquee(ctx, overlay.marquee, accent);
 };
 
+const EXPORT_PADDING = 24; // margin around the drawing in exported images
+const EXPORT_SCALE = 2; // exported images have twice the resolution, so they stay sharp
+
+// Draws the elements on a new canvas sized to fit them, with a white background and no grid
+WB.renderToImage = function (elements) {
+  const b = WB.getCommonBounds(elements);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil((b.width + EXPORT_PADDING * 2) * EXPORT_SCALE);
+  canvas.height = Math.ceil((b.height + EXPORT_PADDING * 2) * EXPORT_SCALE);
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const offsetX = (EXPORT_PADDING - b.x) * EXPORT_SCALE;
+  const offsetY = (EXPORT_PADDING - b.y) * EXPORT_SCALE;
+  ctx.setTransform(EXPORT_SCALE, 0, 0, EXPORT_SCALE, offsetX, offsetY);
+  elements.forEach((el) => drawElement(ctx, el));
+  return canvas;
+};
+
 // Dot grid as a visual guide, only over the visible part of the scene
 function drawGrid(ctx, screen, color) {
   const { x: viewX, y: viewY, zoom } = WB.view;
