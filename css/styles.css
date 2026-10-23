@@ -480,3 +480,34 @@ body.sidebar-hidden .sidebar {
   opacity: 0;
   cursor: pointer;
 }
+
+.hex-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 14px;
+}
+
+.hex-field span {
+  opacity: 0.5;
+}
+
+.hex-field input {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+
+.hex-field:focus-within {
+  border-color: var(--accent);
+}

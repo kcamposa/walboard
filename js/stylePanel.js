@@ -4,6 +4,14 @@ window.WB = window.WB || {};
 WB.STROKE_COLORS = ["#1f1f1f", "#6b7280", "#d64545", "#e8890c", "#2e9d4f", "#0f766e", "#2563c9", "#7c4dd6"];
 WB.FILL_COLORS = ["transparent", "#fde2e2", "#fdf0a0", "#d6f5dd", "#d4e8fb", "#e6dcfb", "#ececea"];
 
+// "#2563c9", "2563c9" or the short "#f0a" → "#2563c9" / "#ff00aa"; anything else → null
+function normalizeHex(text) {
+  const hex = text.trim().replace(/^#/, "").toLowerCase();
+  if (/^[0-9a-f]{6}$/.test(hex)) return `#${hex}`;
+  if (/^[0-9a-f]{3}$/.test(hex)) return `#${[...hex].map((c) => c + c).join("")}`;
+  return null;
+}
+
 // onChange(kind, color): kind is "strokeColor" or "fillColor"
 WB.createStylePanel = function (container, onChange) {
   const rows = {
@@ -44,6 +52,26 @@ WB.createStylePanel = function (container, onChange) {
     custom.appendChild(picker);
     swatchesEl.appendChild(custom);
 
+    // Hex code field: shows the current color and accepts a typed one (Enter or clicking outside)
+    const hexField = document.createElement("label");
+    hexField.className = "hex-field";
+    hexField.innerHTML = `<span>#</span><input type="text" maxlength="7" spellcheck="false" placeholder="${kind === "fillColor" ? "none" : "hex"}" />`;
+    const hexInput = hexField.querySelector("input");
+    let shownValue = null;
+    hexInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") hexInput.blur();
+    });
+    hexInput.addEventListener("blur", () => {
+      const color = normalizeHex(hexInput.value);
+      if (color && color !== shownValue) onChange(kind, color);
+      else showHex(shownValue); // invalid or unchanged: back to the current color
+    });
+    el.appendChild(hexField);
+
+    function showHex(value) {
+      hexInput.value = value && value !== "transparent" ? value.replace(/^#/, "") : "";
+    }
+
     // Marks the swatch of the current color; a color outside the palette marks the custom one
     function setValue(value) {
       let found = false;
@@ -60,6 +88,9 @@ WB.createStylePanel = function (container, onChange) {
       } else {
         custom.style.removeProperty("--swatch");
       }
+      shownValue = value;
+      // Not while the user is typing in it
+      if (document.activeElement !== hexInput) showHex(value);
     }
 
     return { el, setValue };
