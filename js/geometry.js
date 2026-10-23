@@ -1,7 +1,12 @@
 // Geometry helpers: element bounds, hit testing, moving and scaling.
 window.WB = window.WB || {};
 
-const HIT_TOLERANCE = 8; // how close (in pixels) a click must be to a line to hit it
+// Camera: the scene point shown at the top-left corner of the screen, and the zoom level.
+// Screen position = (scene position - view.x / view.y) * zoom
+WB.view = { x: 0, y: 0, zoom: 1 };
+
+// Sizes in screen pixels: divided by the zoom so they look the same at any zoom level
+const HIT_TOLERANCE = 8; // how close a click must be to a line to hit it
 WB.HANDLE_SIZE = 9; // size of the resize handles
 WB.SELECTION_PADDING = 6; // gap between the elements and the selection frame
 
@@ -60,7 +65,7 @@ WB.hitTest = function (el, p) {
   const point = [p.x, p.y];
   if (el.points) {
     const route = el.type === "pencil" ? WB.absolutePoints(el) : WB.lineRoute(el);
-    const tolerance = HIT_TOLERANCE + el.strokeWidth / 2;
+    const tolerance = HIT_TOLERANCE / WB.view.zoom + el.strokeWidth / 2;
     if (route.length === 1) return Math.hypot(point[0] - route[0][0], point[1] - route[0][1]) <= tolerance;
     return route.slice(1).some((b, i) => distanceToSegment(point, route[i], b) <= tolerance);
   }
@@ -88,7 +93,7 @@ WB.boxContains = function (outer, inner) {
 
 // Selection frame with its padding around the selected elements' bounds
 WB.selectionFrame = function (bounds) {
-  const pad = WB.SELECTION_PADDING;
+  const pad = WB.SELECTION_PADDING / WB.view.zoom;
   return { x: bounds.x - pad, y: bounds.y - pad, width: bounds.width + pad * 2, height: bounds.height + pad * 2 };
 };
 
@@ -104,7 +109,7 @@ WB.handlePositions = function (frame) {
 
 // Name of the resize handle under the point, or null
 WB.handleAt = function (frame, p) {
-  const reach = WB.HANDLE_SIZE;
+  const reach = WB.HANDLE_SIZE / WB.view.zoom;
   const found = Object.entries(WB.handlePositions(frame)).find(
     ([, [hx, hy]]) => Math.abs(p.x - hx) <= reach && Math.abs(p.y - hy) <= reach,
   );

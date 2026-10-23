@@ -57,7 +57,14 @@ const ARROW_MENU = {
 
 // Grouped tools; a separator is drawn between groups. An entry with `menu` is a menu button
 WB.TOOL_GROUPS = [
-  [{ id: "select", label: "Select", icon: '<path d="M5 3l14 8-6 2-3 6z"/>' }],
+  [
+    { id: "select", label: "Select", icon: '<path d="M5 3l14 8-6 2-3 6z"/>' },
+    {
+      id: "hand",
+      label: "Hand (move the canvas)",
+      icon: '<path d="M8 13V6a1.5 1.5 0 0 1 3 0v5M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6a1.5 1.5 0 0 1 3 0v5M17 11V8.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1.5a6 6 0 0 1-4.8-2.4L4.5 15a1.5 1.5 0 0 1 2.3-1.9L8 14.5"/>',
+    },
+  ],
   [
     { id: "rectangle", label: "Rectangle", icon: '<rect x="4" y="5" width="16" height="14" rx="1"/>' },
     { id: "ellipse", label: "Ellipse", icon: '<ellipse cx="12" cy="12" rx="8" ry="6"/>' },

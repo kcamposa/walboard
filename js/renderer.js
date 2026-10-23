@@ -4,22 +4,25 @@ window.WB = window.WB || {};
 const ARROW_HEAD_LENGTH = 18;
 const ARROW_HEAD_ANGLE = Math.PI / 7;
 
+const GRID_GAP = 20; // distance between grid dots, in scene units
+const MIN_GRID_GAP_ON_SCREEN = 12; // when zoomed out, skip dots so the grid does not get too dense
+
+// screen: { width, height, dpr } of the canvas in CSS pixels.
 // overlay (optional): { selection: elements, marquee: box being dragged to select }
-WB.renderScene = function (ctx, width, height, elements, overlay = {}) {
+WB.renderScene = function (ctx, screen, elements, overlay = {}) {
   const styles = getComputedStyle(document.documentElement);
+  const { x: viewX, y: viewY, zoom } = WB.view;
 
+  // Background in screen coordinates
+  ctx.setTransform(screen.dpr, 0, 0, screen.dpr, 0, 0);
   ctx.fillStyle = styles.getPropertyValue("--bg");
-  ctx.fillRect(0, 0, width, height);
+  ctx.fillRect(0, 0, screen.width, screen.height);
 
-  // Dot grid as a visual guide
-  const gap = 20;
-  ctx.fillStyle = styles.getPropertyValue("--grid-dot");
-  for (let x = gap; x < width; x += gap) {
-    for (let y = gap; y < height; y += gap) {
-      ctx.fillRect(x, y, 1.5, 1.5);
-    }
-  }
+  // Everything else in scene coordinates, moved and scaled by the camera
+  const scale = screen.dpr * zoom;
+  ctx.setTransform(scale, 0, 0, scale, -viewX * scale, -viewY * scale);
 
+  drawGrid(ctx, screen, styles.getPropertyValue("--grid-dot"));
   elements.forEach((el) => drawElement(ctx, el));
 
   const accent = styles.getPropertyValue("--accent");
@@ -27,20 +30,39 @@ WB.renderScene = function (ctx, width, height, elements, overlay = {}) {
   if (overlay.marquee) drawMarquee(ctx, overlay.marquee, accent);
 };
 
-// Dashed frame around the selected elements, with a resize handle at each corner
+// Dot grid as a visual guide, only over the visible part of the scene
+function drawGrid(ctx, screen, color) {
+  const { x: viewX, y: viewY, zoom } = WB.view;
+  let gap = GRID_GAP;
+  while (gap * zoom < MIN_GRID_GAP_ON_SCREEN) gap *= 2;
+  const dot = 1.5 / zoom;
+  const right = viewX + screen.width / zoom;
+  const bottom = viewY + screen.height / zoom;
+
+  ctx.fillStyle = color;
+  for (let x = Math.ceil(viewX / gap) * gap; x < right; x += gap) {
+    for (let y = Math.ceil(viewY / gap) * gap; y < bottom; y += gap) {
+      ctx.fillRect(x, y, dot, dot);
+    }
+  }
+}
+
+// Dashed frame around the selected elements, with a resize handle at each corner.
+// Line widths and handle sizes are divided by the zoom so they keep the same size on screen
 function drawSelection(ctx, selection, accent) {
+  const zoom = WB.view.zoom;
   const frame = WB.selectionFrame(WB.getCommonBounds(selection));
   ctx.save();
   ctx.strokeStyle = accent;
-  ctx.lineWidth = 1;
-  ctx.setLineDash([5, 4]);
+  ctx.lineWidth = 1 / zoom;
+  ctx.setLineDash([5 / zoom, 4 / zoom]);
   ctx.strokeRect(frame.x, frame.y, frame.width, frame.height);
   ctx.setLineDash([]);
   ctx.fillStyle = "#ffffff";
-  const half = WB.HANDLE_SIZE / 2;
+  const size = WB.HANDLE_SIZE / zoom;
   Object.values(WB.handlePositions(frame)).forEach(([hx, hy]) => {
-    ctx.fillRect(hx - half, hy - half, WB.HANDLE_SIZE, WB.HANDLE_SIZE);
-    ctx.strokeRect(hx - half, hy - half, WB.HANDLE_SIZE, WB.HANDLE_SIZE);
+    ctx.fillRect(hx - size / 2, hy - size / 2, size, size);
+    ctx.strokeRect(hx - size / 2, hy - size / 2, size, size);
   });
   ctx.restore();
 }
@@ -54,7 +76,7 @@ function drawMarquee(ctx, box, accent) {
   ctx.fillRect(b.x, b.y, b.width, b.height);
   ctx.globalAlpha = 1;
   ctx.strokeStyle = accent;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 1 / WB.view.zoom;
   ctx.strokeRect(b.x, b.y, b.width, b.height);
   ctx.restore();
 }

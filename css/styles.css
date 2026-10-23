@@ -72,7 +72,22 @@ body {
   height: 20px;
 }
 
-.history-bar {
+.zoom-label {
+  min-width: 52px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.zoom-label:hover {
+  background: #f0f0ec;
+}
+
+.bottom-bar {
   position: fixed;
   left: 12px;
   bottom: 12px;

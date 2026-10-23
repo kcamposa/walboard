@@ -10,7 +10,15 @@
   <body>
     <div id="toolbar" class="toolbar" role="toolbar" aria-label="Tools"></div>
     <canvas id="board"></canvas>
-    <div class="history-bar">
+    <div class="bottom-bar">
+      <button id="zoom-out" class="tool-btn" title="Zoom out">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12" /></svg>
+      </button>
+      <button id="zoom-reset" class="zoom-label" title="Reset zoom">100%</button>
+      <button id="zoom-in" class="tool-btn" title="Zoom in">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12M12 6v12" /></svg>
+      </button>
+      <div class="tool-separator"></div>
       <button id="undo" class="tool-btn" title="Undo" disabled>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 14L4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-3" />

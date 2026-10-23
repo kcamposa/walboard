@@ -31,6 +31,7 @@ window.WB = window.WB || {};
     editingId: null, // text element hidden while its editor is open
     selectedIds: new Set(),
     drag: null, // current select-tool drag: { mode: "move" | "resize" | "marquee", ... }
+    pan: null, // last pointer position while moving the canvas
   };
   let renderQueued = false; // declared before the toolbar, which triggers a render when created
 
@@ -62,15 +63,73 @@ window.WB = window.WB || {};
 
   WB.createToolbar(document.getElementById("toolbar"), (tool) => {
     state.tool = tool;
-    canvas.style.cursor = tool === "select" ? "default" : "crosshair";
+    canvas.style.cursor = toolCursor();
     if (tool !== "select") state.selectedIds.clear();
     requestRender();
   });
 
-  // For now screen and canvas coordinates match; this will change with zoom (step 7)
-  function toScene(e) {
-    return { x: e.clientX, y: e.clientY };
+  function toolCursor() {
+    return { select: "default", hand: "grab" }[state.tool] || "crosshair";
   }
+
+  // Converts a pointer event position (screen) into scene coordinates
+  function toScene(e) {
+    return { x: e.clientX / WB.view.zoom + WB.view.x, y: e.clientY / WB.view.zoom + WB.view.y };
+  }
+
+  function toScreen(x, y) {
+    return { x: (x - WB.view.x) * WB.view.zoom, y: (y - WB.view.y) * WB.view.zoom };
+  }
+
+  // ---- Camera: panning and zooming ----
+
+  const MIN_ZOOM = 0.1;
+  const MAX_ZOOM = 5;
+  const ZOOM_STEP = 1.2; // factor of the zoom buttons
+  const zoomLabel = document.getElementById("zoom-reset");
+
+  // A text being edited is closed before the view changes, so it does not stay in the wrong place
+  function beforeViewChange() {
+    if (state.textEditor) state.textEditor.commit();
+  }
+
+  function panBy(dxScreen, dyScreen) {
+    beforeViewChange();
+    WB.view.x += dxScreen / WB.view.zoom;
+    WB.view.y += dyScreen / WB.view.zoom;
+    requestRender();
+  }
+
+  // Changes the zoom keeping the scene point under (screenX, screenY) in the same place
+  function zoomTo(zoom, screenX, screenY) {
+    beforeViewChange();
+    const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
+    const sceneX = screenX / WB.view.zoom + WB.view.x;
+    const sceneY = screenY / WB.view.zoom + WB.view.y;
+    WB.view.zoom = newZoom;
+    WB.view.x = sceneX - screenX / newZoom;
+    WB.view.y = sceneY - screenY / newZoom;
+    zoomLabel.textContent = `${Math.round(newZoom * 100)}%`;
+    requestRender();
+  }
+
+  // Mouse wheel / two fingers on the trackpad move the canvas; pinching on the trackpad zooms
+  // (browsers report the pinch as a wheel event with ctrlKey set)
+  canvas.addEventListener(
+    "wheel",
+    (e) => {
+      e.preventDefault();
+      if (e.ctrlKey) zoomTo(WB.view.zoom * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY);
+      else panBy(e.deltaX, e.deltaY);
+    },
+    { passive: false },
+  );
+
+  const centerX = () => window.innerWidth / 2;
+  const centerY = () => window.innerHeight / 2;
+  document.getElementById("zoom-in").addEventListener("click", () => zoomTo(WB.view.zoom * ZOOM_STEP, centerX(), centerY()));
+  document.getElementById("zoom-out").addEventListener("click", () => zoomTo(WB.view.zoom / ZOOM_STEP, centerX(), centerY()));
+  zoomLabel.addEventListener("click", () => zoomTo(1, centerX(), centerY()));
 
   function selectedElements() {
     return state.elements.filter((el) => state.selectedIds.has(el.id));
@@ -82,6 +141,14 @@ window.WB = window.WB || {};
   }
 
   canvas.addEventListener("pointerdown", (e) => {
+    // Hand tool, or dragging with the middle mouse button, moves the canvas
+    if (e.button === 1 || (e.button === 0 && state.tool === "hand")) {
+      e.preventDefault();
+      state.pan = { x: e.clientX, y: e.clientY };
+      canvas.style.cursor = "grabbing";
+      canvas.setPointerCapture(e.pointerId);
+      return;
+    }
     if (e.button !== 0) return;
     const p = toScene(e);
     if (state.tool === "text") {
@@ -100,6 +167,11 @@ window.WB = window.WB || {};
   });
 
   canvas.addEventListener("pointermove", (e) => {
+    if (state.pan) {
+      panBy(state.pan.x - e.clientX, state.pan.y - e.clientY);
+      state.pan = { x: e.clientX, y: e.clientY };
+      return;
+    }
     const p = toScene(e);
     if (state.drawing) updateDrawing(e, p);
     else if (state.drag) updateSelectDrag(e, p);
@@ -110,6 +182,10 @@ window.WB = window.WB || {};
   canvas.addEventListener("pointercancel", finishPointer);
 
   function finishPointer() {
+    if (state.pan) {
+      state.pan = null;
+      canvas.style.cursor = toolCursor();
+    }
     if (state.drawing) finishDrawing();
     if (state.drag) {
       state.drag = null;
@@ -297,10 +373,11 @@ window.WB = window.WB || {};
 
   // onNew: what to do with the element if it has text and is not on the canvas yet
   function openEditor(el, onNew) {
+    const position = toScreen(el.x, el.y);
     state.textEditor = WB.openTextEditor({
-      x: el.x,
-      y: el.y,
-      fontSize: el.fontSize,
+      x: position.x,
+      y: position.y,
+      fontSize: el.fontSize * WB.view.zoom,
       color: el.strokeColor,
       text: el.text,
       onCommit(text) {
@@ -338,7 +415,8 @@ window.WB = window.WB || {};
     const visible = state.elements.filter((el) => el.id !== state.editingId);
     if (state.drawing) visible.push(state.drawing);
     const selection = state.tool === "select" ? selectedElements() : [];
-    WB.renderScene(ctx, window.innerWidth, window.innerHeight, visible, {
+    const screen = { width: window.innerWidth, height: window.innerHeight, dpr: window.devicePixelRatio || 1 };
+    WB.renderScene(ctx, screen, visible, {
       selection,
       marquee: state.drag && state.drag.mode === "marquee" ? state.drag.marquee : null,
     });
@@ -351,10 +429,12 @@ window.WB = window.WB || {};
     deleteButton.hidden = !show;
     if (!show) return;
     const frame = WB.selectionFrame(WB.getCommonBounds(selection));
+    const topLeft = toScreen(frame.x, frame.y);
+    const bottomRight = toScreen(frame.x + frame.width, frame.y + frame.height);
     const size = deleteButton.offsetWidth;
-    let top = frame.y - size - 8;
-    if (top < 64) top = frame.y + frame.height + 8;
-    const left = Math.min(Math.max(8, frame.x + frame.width - size), window.innerWidth - size - 8);
+    let top = topLeft.y - size - 8;
+    if (top < 64) top = bottomRight.y + 8;
+    const left = Math.min(Math.max(8, bottomRight.x - size), window.innerWidth - size - 8);
     deleteButton.style.left = `${left}px`;
     deleteButton.style.top = `${top}px`;
   }
@@ -364,7 +444,6 @@ window.WB = window.WB || {};
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.floor(window.innerWidth * dpr);
     canvas.height = Math.floor(window.innerHeight * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     render();
   }
 
