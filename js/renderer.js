@@ -36,8 +36,12 @@ function drawElement(ctx, el) {
       drawSketchyLine(ctx, el);
       break;
     case "pencil":
-      WB.traceOpenCurve(ctx, absolutePoints(el));
-      ctx.stroke();
+      // Same overlapping hand-drawn strokes as the other shapes
+      ctx.lineWidth = el.strokeWidth * 0.75;
+      for (let pass = 0; pass < WB.SKETCH_PASSES; pass++) {
+        WB.traceSketchyPath(ctx, absolutePoints(el), el.seed, pass);
+        ctx.stroke();
+      }
       break;
     default:
       // Box shapes: rectangle, ellipse, polygons, special and infrastructure shapes
