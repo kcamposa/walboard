@@ -42,7 +42,20 @@ const POLYGON_TOOLS = Object.entries(WB.POLYGON_SHAPES).map(([id, shape]) => ({
   icon: polygonIcon(shape.vertices),
 }));
 
-// Grouped tools; a separator is drawn between groups
+const ARROW_ICON = '<path d="M5 19L19 5M11 5h8v8"/>';
+
+// The arrow button opens a menu with the arrow styles
+const ARROW_MENU = {
+  title: "Arrows",
+  icon: ARROW_ICON,
+  tools: [
+    { id: "arrow", label: "Arrow", icon: ARROW_ICON },
+    { id: "doubleArrow", label: "Double arrow", icon: '<path d="M5 19L19 5M11 5h8v8M5 11v8h8"/>' },
+    { id: "elbowArrow", label: "Elbow arrow", icon: '<path d="M3 5h9v14h8M16 15l4 4-4 4"/>' },
+  ],
+};
+
+// Grouped tools; a separator is drawn between groups. An entry with `menu` is a menu button
 WB.TOOL_GROUPS = [
   [{ id: "select", label: "Select", icon: '<path d="M5 3l14 8-6 2-3 6z"/>' }],
   [
@@ -52,7 +65,7 @@ WB.TOOL_GROUPS = [
   ],
   [
     { id: "line", label: "Line", icon: '<path d="M5 19L19 5"/>' },
-    { id: "arrow", label: "Arrow", icon: '<path d="M5 19L19 5M11 5h8v8"/>' },
+    { menu: ARROW_MENU },
   ],
   [
     { id: "text", label: "Text", icon: '<path d="M5 6h14M12 6v13"/>' },
@@ -60,7 +73,7 @@ WB.TOOL_GROUPS = [
   ],
 ];
 
-WB.TOOLS = WB.TOOL_GROUPS.flat();
+WB.TOOLS = WB.TOOL_GROUPS.flat().filter((tool) => !tool.menu);
 
 // Menu buttons at the end of the toolbar. category: optional heading inside the menu
 const MENUS = [
@@ -94,6 +107,10 @@ WB.createToolbar = function (container, onChange) {
   WB.TOOL_GROUPS.forEach((group, i) => {
     if (i > 0) container.appendChild(createSeparator());
     group.forEach((tool) => {
+      if (tool.menu) {
+        container.appendChild(createMenuButton(tool.menu));
+        return;
+      }
       const btn = document.createElement("button");
       btn.className = "tool-btn";
       btn.title = tool.label;

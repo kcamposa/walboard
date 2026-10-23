@@ -15,7 +15,9 @@ WB.getFontFamily = function () {
 let nextId = 1;
 
 // Types drawn with a list of points instead of a box
-WB.LINEAR_TYPES = ["line", "arrow", "pencil"];
+WB.LINEAR_TYPES = ["line", "arrow", "doubleArrow", "elbowArrow", "pencil"];
+// Linear types defined by a start and an end point
+WB.TWO_POINT_TYPES = ["line", "arrow", "doubleArrow", "elbowArrow"];
 
 WB.createElement = function (type, x, y) {
   const el = {
@@ -31,7 +33,7 @@ WB.createElement = function (type, x, y) {
   const extra = WB.EXTRA_SHAPES[type];
   if (extra && extra.fillColor) el.fillColor = extra.fillColor;
   if (WB.LINEAR_TYPES.includes(type)) {
-    // Points relative to (x, y). Line and arrow: start and end. Pencil: the whole path.
+    // Points relative to (x, y). Lines and arrows: start and end. Pencil: the whole path.
     el.points = type === "pencil" ? [[0, 0]] : [[0, 0], [0, 0]];
   }
   return el;

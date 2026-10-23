@@ -33,6 +33,8 @@ function drawElement(ctx, el) {
   switch (el.type) {
     case "line":
     case "arrow":
+    case "doubleArrow":
+    case "elbowArrow":
       drawSketchyLine(ctx, el);
       break;
     case "pencil":
@@ -91,25 +93,48 @@ function drawInfraShape(ctx, el) {
 }
 
 function drawSketchyLine(ctx, el) {
-  const [from, to] = absolutePoints(el);
-  const strokes = [[from, to]];
+  const route = lineRoute(el);
+  const strokes = [route];
 
-  if (el.type === "arrow") {
-    const length = Math.hypot(to[0] - from[0], to[1] - from[1]);
-    const head = Math.min(ARROW_HEAD_LENGTH, length / 3);
-    const angle = Math.atan2(to[1] - from[1], to[0] - from[0]);
-    [-ARROW_HEAD_ANGLE, ARROW_HEAD_ANGLE].forEach((side) => {
-      const a = angle + Math.PI + side;
-      strokes.push([to, [to[0] + head * Math.cos(a), to[1] + head * Math.sin(a)]]);
-    });
+  // Arrowheads: at the end for every arrow, also at the start for the double arrow
+  if (el.type !== "line") {
+    strokes.push(...arrowWings(route[route.length - 2], route[route.length - 1]));
+  }
+  if (el.type === "doubleArrow") {
+    strokes.push(...arrowWings(route[1], route[0]));
   }
 
   ctx.lineWidth = el.strokeWidth * 0.75;
-  strokes.forEach(([a, b], i) => {
+  strokes.forEach((points, i) => {
     for (let pass = 0; pass < WB.SKETCH_PASSES; pass++) {
-      WB.traceSketchyLine(ctx, a, b, el.seed + i * 104729, pass);
+      WB.traceSketchyPath(ctx, points, el.seed + i * 104729, pass);
       ctx.stroke();
     }
+  });
+}
+
+// Points the line goes through. The elbow arrow turns at right angles halfway:
+// horizontal-vertical-horizontal, or vertical-horizontal-vertical when it is taller than wide
+function lineRoute(el) {
+  const [from, to] = absolutePoints(el);
+  if (el.type !== "elbowArrow") return [from, to];
+
+  const horizontalFirst = Math.abs(to[0] - from[0]) >= Math.abs(to[1] - from[1]);
+  const corners = horizontalFirst
+    ? [[(from[0] + to[0]) / 2, from[1]], [(from[0] + to[0]) / 2, to[1]]]
+    : [[from[0], (from[1] + to[1]) / 2], [to[0], (from[1] + to[1]) / 2]];
+  // Skip repeated points (a straight elbow arrow has no real corners)
+  return [from, ...corners, to].filter((p, i, all) => i === 0 || p[0] !== all[i - 1][0] || p[1] !== all[i - 1][1]);
+}
+
+// The two wings of an arrowhead pointing from `from` to `tip`
+function arrowWings(from, tip) {
+  const length = Math.hypot(tip[0] - from[0], tip[1] - from[1]);
+  const head = Math.min(ARROW_HEAD_LENGTH, length / 3);
+  const angle = Math.atan2(tip[1] - from[1], tip[0] - from[0]);
+  return [-ARROW_HEAD_ANGLE, ARROW_HEAD_ANGLE].map((side) => {
+    const a = angle + Math.PI + side;
+    return [tip, [tip[0] + head * Math.cos(a), tip[1] + head * Math.sin(a)]];
   });
 }
 

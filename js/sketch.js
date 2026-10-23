@@ -326,12 +326,6 @@ WB.traceSketchyShape = function (ctx, el, pass = 0) {
   traceClosedCurve(ctx, wobble(shapeOutline(el), random, true));
 };
 
-// Hand-drawn straight line between two absolute points
-WB.traceSketchyLine = function (ctx, from, to, seed, pass = 0) {
-  const random = WB.createRandom(seed + pass * 7919);
-  WB.traceOpenCurve(ctx, wobble(subdivide(from, to), random, false));
-};
-
 // Hand-drawn open path through several points (straight segments are subdivided so they can be wavy)
 WB.traceSketchyPath = function (ctx, points, seed, pass = 0) {
   const random = WB.createRandom(seed + pass * 7919);

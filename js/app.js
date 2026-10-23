@@ -55,7 +55,7 @@ window.WB = window.WB || {};
     if (el.type === "pencil") {
       const [lx, ly] = el.points[el.points.length - 1];
       if (Math.hypot(dx - lx, dy - ly) >= PENCIL_MIN_STEP) el.points.push([dx, dy]);
-    } else if (el.type === "line" || el.type === "arrow") {
+    } else if (WB.TWO_POINT_TYPES.includes(el.type)) {
       el.points[1] = e.shiftKey ? snapToAngle(dx, dy) : [dx, dy];
     } else {
       el.width = dx;
@@ -79,7 +79,7 @@ window.WB = window.WB || {};
   // A click without dragging must not leave invisible elements
   function isTooSmall(el) {
     if (el.type === "pencil") return el.points.length < 2;
-    if (el.type === "line" || el.type === "arrow") return Math.hypot(...el.points[1]) < MIN_SIZE;
+    if (WB.TWO_POINT_TYPES.includes(el.type)) return Math.hypot(...el.points[1]) < MIN_SIZE;
     return el.width < MIN_SIZE && el.height < MIN_SIZE;
   }
 
