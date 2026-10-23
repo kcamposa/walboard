@@ -1,17 +1,18 @@
 // Style panel: stroke and background colors, for the next shape or for the selected ones.
 window.WB = window.WB || {};
 
-// Palettes: neutrals first, then the hues in rainbow order. 14 colors + the custom one = 3 rows of 5
+// Palettes: Walmart brand colors first, then neutrals and the hues in rainbow order.
+// 14 colors + the custom one = 3 rows of 5. The name shows when hovering a swatch
 WB.STROKE_COLORS = [
-  "#1f1f1f", "#4b5563", "#9ca3af", "#d64545", "#db2777",
-  "#e8890c", "#c99a06", "#8b5e34", "#2e9d4f", "#0f766e",
-  "#0891b2", "#2563c9", "#4338ca", "#7c4dd6",
+  ["#041e42", "Walmart navy"], ["#0071dc", "Walmart blue"], ["#ffc220", "Walmart yellow"], ["#1f1f1f", "Black"], ["#4b5563", "Dark gray"],
+  ["#9ca3af", "Gray"], ["#d64545", "Red"], ["#db2777", "Pink"], ["#e8890c", "Orange"], ["#8b5e34", "Brown"],
+  ["#2e9d4f", "Green"], ["#0f766e", "Teal"], ["#0891b2", "Cyan"], ["#7c4dd6", "Purple"],
 ];
 // Soft tones that keep dark text readable on top
 WB.FILL_COLORS = [
-  "transparent", "#ffffff", "#ececea", "#fde2e2", "#fce7f3",
-  "#ffe8cc", "#fdf0a0", "#f3e4d3", "#d6f5dd", "#ccf0eb",
-  "#cff1f8", "#d4e8fb", "#e0e1fb", "#e6dcfb",
+  ["transparent", "No background"], ["#ffffff", "White"], ["#e6f1fc", "Light Walmart blue"], ["#fff3cc", "Light Walmart yellow"], ["#ececea", "Light gray"],
+  ["#fdf0a0", "Sticky yellow"], ["#fde2e2", "Light red"], ["#fce7f3", "Light pink"], ["#ffe8cc", "Light orange"], ["#f3e4d3", "Beige"],
+  ["#d6f5dd", "Light green"], ["#ccf0eb", "Light teal"], ["#cff1f8", "Light cyan"], ["#e6dcfb", "Light purple"],
 ];
 
 // "#2563c9", "2563c9" or the short "#f0a" → "#2563c9" / "#ff00aa"; anything else → null
@@ -49,7 +50,7 @@ function panelIcon(content) {
 // or a font style ("bold", "italic", "underline", "strike") with true / false
 WB.createStylePanel = function (container, onChange) {
   const rows = {
-    strokeColor: createRow("Stroke", WB.STROKE_COLORS, "#1f1f1f"),
+    strokeColor: createRow("Stroke", WB.STROKE_COLORS, "#041e42"),
     fillColor: createRow("Background", WB.FILL_COLORS, "#fdf0a0"),
   };
   const text = createTextSection();
@@ -122,12 +123,12 @@ WB.createStylePanel = function (container, onChange) {
     el.innerHTML = `<div class="style-label">${label}</div><div class="swatches"></div>`;
     const swatchesEl = el.querySelector(".swatches");
 
-    const swatches = colors.map((color) => {
+    const swatches = colors.map(([color, name]) => {
       const swatch = document.createElement("button");
       swatch.type = "button";
       swatch.className = color === "transparent" ? "swatch none" : "swatch";
       swatch.style.setProperty("--swatch", color);
-      swatch.title = color === "transparent" ? "No background" : color;
+      swatch.title = color === "transparent" ? name : `${name} · ${color}`;
       swatch.dataset.color = color;
       swatch.addEventListener("click", () => onChange(kind, color));
       swatchesEl.appendChild(swatch);

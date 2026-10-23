@@ -1,11 +1,20 @@
 :root {
-  --bg: #f7f7f5;
-  --grid-dot: #d4d4d0;
+  /* Walmart-inspired theme: blue as the main color, yellow for highlights, white panels, dark navy text */
+  --brand-blue: #0071dc;
+  --brand-blue-dark: #004c91;
+  --brand-yellow: #ffc220;
+  --brand-navy: #041e42;
+
+  --bg: #f6f8fb;
+  --grid-dot: #d3dbe6;
   --panel: #ffffff;
-  --panel-border: #e2e2de;
-  --text: #1f1f1f;
-  --accent: #0f766e;
-  --accent-soft: #ccfbf1;
+  --panel-border: #dde4ee;
+  --text: var(--brand-navy);
+  --hover: #eef3f9;
+  --accent: var(--brand-blue);
+  --accent-soft: #e6f1fc;
+  --danger: #c62828;
+  --danger-soft: #fdecec;
   /* Font for the whole tool; fallbacks are handwritten system fonts */
   --font-hand: "Excalifont", "Segoe Print", "Chalkboard", "Bradley Hand", cursive;
   --sidebar-width: 280px;
@@ -73,7 +82,7 @@ body {
 }
 
 .tool-btn:hover {
-  background: #f0f0ec;
+  background: var(--hover);
 }
 
 .tool-btn.active {
@@ -98,7 +107,7 @@ body {
 }
 
 .zoom-label:hover {
-  background: #f0f0ec;
+  background: var(--hover);
 }
 
 .file-bar {
@@ -145,7 +154,7 @@ body {
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   background: var(--panel);
-  color: #b42318;
+  color: var(--danger);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   cursor: pointer;
 }
@@ -155,7 +164,7 @@ body {
 }
 
 .floating-btn:hover {
-  background: #fef3f2;
+  background: var(--danger-soft);
 }
 
 .floating-btn svg {
@@ -243,7 +252,7 @@ body {
 }
 
 .shape-item:hover {
-  background: #f0f0ec;
+  background: var(--hover);
 }
 
 .shape-item.active {
@@ -284,11 +293,11 @@ body.sidebar-hidden .sidebar {
 }
 
 .new-canvas-btn {
-  padding: 8px 10px;
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--accent);
+  padding: 9px 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--brand-blue);
+  color: #ffffff;
   font: inherit;
   font-size: 16px;
   text-align: left;
@@ -296,7 +305,7 @@ body.sidebar-hidden .sidebar {
 }
 
 .new-canvas-btn:hover {
-  background: var(--accent-soft);
+  background: var(--brand-blue-dark);
 }
 
 .canvas-search {
@@ -335,11 +344,12 @@ body.sidebar-hidden .sidebar {
 }
 
 .canvas-item:hover {
-  background: #f0f0ec;
+  background: var(--hover);
 }
 
 .canvas-item.active {
   background: var(--accent-soft);
+  box-shadow: inset 4px 0 0 var(--brand-yellow);
 }
 
 .canvas-info {
@@ -398,7 +408,7 @@ body.sidebar-hidden .sidebar {
 }
 
 .canvas-action.danger {
-  color: #b42318;
+  color: var(--danger);
 }
 
 .canvas-action svg {
@@ -477,7 +487,7 @@ body.sidebar-hidden .sidebar {
 /* Custom color: a rainbow until a custom color is chosen */
 .swatch.custom {
   display: block;
-  background: var(--swatch, conic-gradient(#d64545, #e8890c, #fdf0a0, #2e9d4f, #2563c9, #7c4dd6, #d64545));
+  background: var(--swatch, conic-gradient(#d64545, #e8890c, #ffc220, #2e9d4f, #0071dc, #7c4dd6, #d64545));
 }
 
 .swatch.custom input {
@@ -546,7 +556,7 @@ body.sidebar-hidden .sidebar {
 }
 
 .option-btn:hover {
-  background: #f0f0ec;
+  background: var(--hover);
 }
 
 .option-btn.active {

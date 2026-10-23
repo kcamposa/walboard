@@ -2,7 +2,7 @@
 window.WB = window.WB || {};
 
 WB.DEFAULT_STYLE = {
-  strokeColor: "#1f1f1f",
+  strokeColor: "#041e42", // Walmart navy
   fillColor: "transparent",
   strokeWidth: 2,
 };
