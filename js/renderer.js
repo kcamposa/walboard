@@ -1,0 +1,39 @@
+// Dibuja el fondo y todos los elementos en el canvas.
+window.WB = window.WB || {};
+
+WB.renderScene = function (ctx, width, height, elements) {
+  const styles = getComputedStyle(document.documentElement);
+
+  ctx.fillStyle = styles.getPropertyValue("--bg");
+  ctx.fillRect(0, 0, width, height);
+
+  // Cuadrícula de puntos como guía visual
+  const gap = 20;
+  ctx.fillStyle = styles.getPropertyValue("--grid-dot");
+  for (let x = gap; x < width; x += gap) {
+    for (let y = gap; y < height; y += gap) {
+      ctx.fillRect(x, y, 1.5, 1.5);
+    }
+  }
+
+  elements.forEach((el) => drawElement(ctx, el));
+};
+
+function drawElement(ctx, el) {
+  ctx.save();
+  ctx.strokeStyle = el.strokeColor;
+  ctx.fillStyle = el.fillColor;
+  ctx.lineWidth = el.strokeWidth;
+  ctx.lineJoin = "round";
+
+  switch (el.type) {
+    case "rectangle":
+      ctx.beginPath();
+      ctx.rect(el.x, el.y, el.width, el.height);
+      if (el.fillColor !== "transparent") ctx.fill();
+      ctx.stroke();
+      break;
+  }
+
+  ctx.restore();
+}
