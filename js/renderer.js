@@ -28,11 +28,20 @@ function drawElement(ctx, el) {
   ctx.lineCap = "round";
 
   switch (el.type) {
-    case "rectangle":
-      WB.traceSketchyRect(ctx, normalized(el));
-      if (el.fillColor !== "transparent") ctx.fill();
-      ctx.stroke();
+    case "rectangle": {
+      const box = normalized(el);
+      if (el.fillColor !== "transparent") {
+        WB.traceSketchyRect(ctx, box);
+        ctx.fill();
+      }
+      // Trazos superpuestos y algo más finos: juntos dan el grosor desparejo de una línea a mano
+      ctx.lineWidth = el.strokeWidth * 0.75;
+      for (let pass = 0; pass < WB.SKETCH_PASSES; pass++) {
+        WB.traceSketchyRect(ctx, box, pass);
+        ctx.stroke();
+      }
       break;
+    }
   }
 
   ctx.restore();
