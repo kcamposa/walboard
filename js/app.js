@@ -33,6 +33,7 @@ window.WB = window.WB || {};
     selectedIds: new Set(),
     drag: null, // current select-tool drag: { mode: "move" | "resize" | "marquee", ... }
     pan: null, // last pointer position while moving the canvas
+    style: { strokeColor: WB.DEFAULT_STYLE.strokeColor, fillColor: "transparent" }, // colors for new elements
   };
   let renderQueued = false; // declared before the toolbar, which triggers a render when created
 
@@ -180,7 +181,7 @@ window.WB = window.WB || {};
     if (state.tool === "select") {
       startSelectDrag(e, p);
     } else if (DRAW_TOOLS.includes(state.tool)) {
-      state.drawing = WB.createElement(state.tool, p.x, p.y);
+      state.drawing = WB.createElement(state.tool, p.x, p.y, state.style);
     } else {
       return;
     }
@@ -369,6 +370,47 @@ window.WB = window.WB || {};
     requestRender();
   });
 
+  // ---- Colors ----
+
+  // A color applies to the selected elements (background only to those that can have one),
+  // and is also used for the next elements drawn
+  const stylePanel = WB.createStylePanel(document.getElementById("style-panel"), (kind, color) => {
+    state.style[kind] = color;
+    const targets = selectedElements().filter((el) => kind === "strokeColor" || WB.isFillable(el.type));
+    if (targets.length) {
+      targets.forEach((el) => (el[kind] = color));
+      recordHistory();
+    }
+    requestRender();
+  });
+
+  // The panel shows the colors of the selection, or the ones for the next element of the active tool
+  function updateStylePanel(selection) {
+    const drawingTool = state.tool === "text" || DRAW_TOOLS.includes(state.tool);
+    if (selection.length) {
+      const fillable = selection.filter((el) => WB.isFillable(el.type));
+      stylePanel.update({
+        visible: true,
+        showFill: fillable.length > 0,
+        strokeColor: commonValue(selection, "strokeColor"),
+        fillColor: commonValue(fillable, "fillColor"),
+      });
+    } else {
+      stylePanel.update({
+        visible: drawingTool,
+        showFill: WB.isFillable(state.tool),
+        strokeColor: state.style.strokeColor,
+        fillColor: state.style.fillColor,
+      });
+    }
+  }
+
+  // The value if every element has the same one, otherwise null
+  function commonValue(elements, key) {
+    const values = new Set(elements.map((el) => el[key]));
+    return values.size === 1 ? [...values][0] : null;
+  }
+
   // ---- Files ----
 
   const currentName = () => (store.get(currentId) || {}).name;
@@ -497,7 +539,7 @@ window.WB = window.WB || {};
       editText(hit);
       return;
     }
-    const el = WB.createElement("text", p.x, p.y);
+    const el = WB.createElement("text", p.x, p.y, state.style);
     openEditor(el, () => state.elements.push(el));
   }
 
@@ -558,6 +600,7 @@ window.WB = window.WB || {};
       marquee: state.drag && state.drag.mode === "marquee" ? state.drag.marquee : null,
     });
     placeDeleteButton(selection);
+    updateStylePanel(selection);
   }
 
   // The delete button floats above the selection's top-right corner (below it if there is no room)

@@ -32,7 +32,13 @@ WB.LINEAR_TYPES = ["line", "arrow", "doubleArrow", "elbowArrow", "pencil"];
 // Linear types defined by a start and an end point
 WB.TWO_POINT_TYPES = ["line", "arrow", "doubleArrow", "elbowArrow"];
 
-WB.createElement = function (type, x, y) {
+// Whether the type can have a background: box shapes, except texts and infrastructure icons
+WB.isFillable = function (type) {
+  return !WB.LINEAR_TYPES.includes(type) && type !== "text" && !WB.INFRA_SHAPES[type];
+};
+
+// style (optional): { strokeColor, fillColor } chosen in the style panel
+WB.createElement = function (type, x, y, style = {}) {
   const el = {
     id: `el-${Date.now()}-${nextId++}`,
     type,
@@ -43,8 +49,14 @@ WB.createElement = function (type, x, y) {
     seed: Math.floor(Math.random() * 2 ** 31), // fixes the shape of the hand-drawn stroke
     ...WB.DEFAULT_STYLE,
   };
-  const extra = WB.EXTRA_SHAPES[type];
-  if (extra && extra.fillColor) el.fillColor = extra.fillColor;
+  if (style.strokeColor) el.strokeColor = style.strokeColor;
+  if (style.fillColor && style.fillColor !== "transparent" && WB.isFillable(type)) {
+    el.fillColor = style.fillColor;
+  } else {
+    // Shapes like the sticky note have their own background unless another one is chosen
+    const extra = WB.EXTRA_SHAPES[type];
+    if (extra && extra.fillColor) el.fillColor = extra.fillColor;
+  }
   if (type === "text") {
     el.text = "";
     el.fontSize = WB.DEFAULT_FONT_SIZE;
