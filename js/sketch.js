@@ -14,6 +14,7 @@ WB.createRandom = function (seed) {
 const SEGMENT_LENGTH = 24; // distancia entre puntos en los lados rectos
 const CORNER_STEPS = 6; // puntos por esquina redondeada
 const MAX_CORNER_RADIUS = 32;
+const MAX_POLYGON_RADIUS = 10;
 const WOBBLE = 2.2; // desvío máximo de las ondulaciones, en píxeles
 const WAVE_LENGTH = 90; // distancia aproximada entre ondulaciones
 const JITTER = 0.35; // temblor fino, en píxeles
@@ -48,6 +49,42 @@ function roundedRectOutline(x, y, w, h) {
   edge(x, y + h - r, x, y + r);
   corner(x + r, y + r, Math.PI);
 
+  return points;
+}
+
+// Puntos a lo largo del contorno de un polígono (vértices de 0 a 1), con las puntas levemente redondeadas
+function polygonOutline(x, y, w, h, vertices) {
+  const corners = vertices.map(([vx, vy]) => [x + vx * w, y + vy * h]);
+  const count = corners.length;
+  const points = [];
+
+  for (let i = 0; i < count; i++) {
+    const prev = corners[(i - 1 + count) % count];
+    const curr = corners[i];
+    const next = corners[(i + 1) % count];
+    const lenIn = Math.hypot(curr[0] - prev[0], curr[1] - prev[1]) || 1;
+    const lenOut = Math.hypot(next[0] - curr[0], next[1] - curr[1]) || 1;
+    const r = Math.min(MAX_POLYGON_RADIUS, lenIn * 0.2, lenOut * 0.2);
+
+    // Punta: curva desde un poco antes del vértice hasta un poco después
+    const from = [curr[0] - ((curr[0] - prev[0]) / lenIn) * r, curr[1] - ((curr[1] - prev[1]) / lenIn) * r];
+    const to = [curr[0] + ((next[0] - curr[0]) / lenOut) * r, curr[1] + ((next[1] - curr[1]) / lenOut) * r];
+    for (let s = 0; s < CORNER_STEPS; s++) {
+      const t = s / CORNER_STEPS;
+      const u = 1 - t;
+      points.push([
+        u * u * from[0] + 2 * u * t * curr[0] + t * t * to[0],
+        u * u * from[1] + 2 * u * t * curr[1] + t * t * to[1],
+      ]);
+    }
+
+    // Lado recto hasta la próxima punta
+    const sideEnd = [next[0] - ((next[0] - curr[0]) / lenOut) * r, next[1] - ((next[1] - curr[1]) / lenOut) * r];
+    const n = Math.max(1, Math.round(Math.hypot(sideEnd[0] - to[0], sideEnd[1] - to[1]) / SEGMENT_LENGTH));
+    for (let s = 0; s < n; s++) {
+      points.push([to[0] + ((sideEnd[0] - to[0]) * s) / n, to[1] + ((sideEnd[1] - to[1]) * s) / n]);
+    }
+  }
   return points;
 }
 
@@ -143,15 +180,18 @@ WB.traceOpenCurve = function (ctx, points) {
   ctx.lineTo(last[0], last[1]);
 };
 
-// Contorno a mano de un rectángulo o una elipse (el recuadro debe tener ancho y alto positivos).
+function shapeOutline(el) {
+  if (el.type === "ellipse") return ellipseOutline(el.x, el.y, el.width, el.height);
+  const polygon = WB.POLYGON_SHAPES[el.type];
+  if (polygon) return polygonOutline(el.x, el.y, el.width, el.height, polygon.vertices);
+  return roundedRectOutline(el.x, el.y, el.width, el.height);
+}
+
+// Contorno a mano de una forma de recuadro (el recuadro debe tener ancho y alto positivos).
 // pass: número de trazo (0, 1…); cada uno usa otra semilla para que no coincidan
 WB.traceSketchyShape = function (ctx, el, pass = 0) {
   const random = WB.createRandom(el.seed + pass * 7919);
-  const outline =
-    el.type === "ellipse"
-      ? ellipseOutline(el.x, el.y, el.width, el.height)
-      : roundedRectOutline(el.x, el.y, el.width, el.height);
-  traceClosedCurve(ctx, wobble(outline, random, true));
+  traceClosedCurve(ctx, wobble(shapeOutline(el), random, true));
 };
 
 // Línea recta a mano entre dos puntos absolutos

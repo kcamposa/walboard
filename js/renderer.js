@@ -31,10 +31,6 @@ function drawElement(ctx, el) {
   ctx.lineCap = "round";
 
   switch (el.type) {
-    case "rectangle":
-    case "ellipse":
-      drawSketchyShape(ctx, el);
-      break;
     case "line":
     case "arrow":
       drawSketchyLine(ctx, el);
@@ -43,6 +39,9 @@ function drawElement(ctx, el) {
       WB.traceOpenCurve(ctx, absolutePoints(el));
       ctx.stroke();
       break;
+    default:
+      // Rectángulo, elipse y polígonos
+      drawSketchyShape(ctx, el);
   }
 
   ctx.restore();
