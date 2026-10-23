@@ -72,6 +72,34 @@ body {
   height: 20px;
 }
 
+.floating-btn {
+  position: fixed;
+  z-index: 6;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: #b42318;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+}
+
+.floating-btn[hidden] {
+  display: none;
+}
+
+.floating-btn:hover {
+  background: #fef3f2;
+}
+
+.floating-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
 .text-editor {
   position: fixed;
   z-index: 5;

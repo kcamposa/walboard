@@ -4,7 +4,8 @@ window.WB = window.WB || {};
 const ARROW_HEAD_LENGTH = 18;
 const ARROW_HEAD_ANGLE = Math.PI / 7;
 
-WB.renderScene = function (ctx, width, height, elements) {
+// overlay (optional): { selection: elements, marquee: box being dragged to select }
+WB.renderScene = function (ctx, width, height, elements, overlay = {}) {
   const styles = getComputedStyle(document.documentElement);
 
   ctx.fillStyle = styles.getPropertyValue("--bg");
@@ -20,7 +21,43 @@ WB.renderScene = function (ctx, width, height, elements) {
   }
 
   elements.forEach((el) => drawElement(ctx, el));
+
+  const accent = styles.getPropertyValue("--accent");
+  if (overlay.selection && overlay.selection.length) drawSelection(ctx, overlay.selection, accent);
+  if (overlay.marquee) drawMarquee(ctx, overlay.marquee, accent);
 };
+
+// Dashed frame around the selected elements, with a resize handle at each corner
+function drawSelection(ctx, selection, accent) {
+  const frame = WB.selectionFrame(WB.getCommonBounds(selection));
+  ctx.save();
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5, 4]);
+  ctx.strokeRect(frame.x, frame.y, frame.width, frame.height);
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#ffffff";
+  const half = WB.HANDLE_SIZE / 2;
+  Object.values(WB.handlePositions(frame)).forEach(([hx, hy]) => {
+    ctx.fillRect(hx - half, hy - half, WB.HANDLE_SIZE, WB.HANDLE_SIZE);
+    ctx.strokeRect(hx - half, hy - half, WB.HANDLE_SIZE, WB.HANDLE_SIZE);
+  });
+  ctx.restore();
+}
+
+// Translucent box drawn while dragging to select several elements
+function drawMarquee(ctx, box, accent) {
+  const b = WB.normalizeElement({ ...box });
+  ctx.save();
+  ctx.fillStyle = accent;
+  ctx.globalAlpha = 0.08;
+  ctx.fillRect(b.x, b.y, b.width, b.height);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(b.x, b.y, b.width, b.height);
+  ctx.restore();
+}
 
 function drawElement(ctx, el) {
   ctx.save();
@@ -44,7 +81,7 @@ function drawElement(ctx, el) {
       // Same overlapping hand-drawn strokes as the other shapes
       ctx.lineWidth = el.strokeWidth * 0.75;
       for (let pass = 0; pass < WB.SKETCH_PASSES; pass++) {
-        WB.traceSketchyPath(ctx, absolutePoints(el), el.seed, pass);
+        WB.traceSketchyPath(ctx, WB.absolutePoints(el), el.seed, pass);
         ctx.stroke();
       }
       break;
@@ -108,7 +145,7 @@ function drawText(ctx, el) {
 }
 
 function drawSketchyLine(ctx, el) {
-  const route = lineRoute(el);
+  const route = WB.lineRoute(el);
   const strokes = [route];
 
   // Arrowheads: at the end for every arrow, also at the start for the double arrow
@@ -128,20 +165,6 @@ function drawSketchyLine(ctx, el) {
   });
 }
 
-// Points the line goes through. The elbow arrow turns at right angles halfway:
-// horizontal-vertical-horizontal, or vertical-horizontal-vertical when it is taller than wide
-function lineRoute(el) {
-  const [from, to] = absolutePoints(el);
-  if (el.type !== "elbowArrow") return [from, to];
-
-  const horizontalFirst = Math.abs(to[0] - from[0]) >= Math.abs(to[1] - from[1]);
-  const corners = horizontalFirst
-    ? [[(from[0] + to[0]) / 2, from[1]], [(from[0] + to[0]) / 2, to[1]]]
-    : [[from[0], (from[1] + to[1]) / 2], [to[0], (from[1] + to[1]) / 2]];
-  // Skip repeated points (a straight elbow arrow has no real corners)
-  return [from, ...corners, to].filter((p, i, all) => i === 0 || p[0] !== all[i - 1][0] || p[1] !== all[i - 1][1]);
-}
-
 // The two wings of an arrowhead pointing from `from` to `tip`
 function arrowWings(from, tip) {
   const length = Math.hypot(tip[0] - from[0], tip[1] - from[1]);
@@ -151,11 +174,6 @@ function arrowWings(from, tip) {
     const a = angle + Math.PI + side;
     return [tip, [tip[0] + head * Math.cos(a), tip[1] + head * Math.sin(a)]];
   });
-}
-
-// Line and pencil points are stored relative to (x, y); here they are converted to canvas coordinates
-function absolutePoints(el) {
-  return el.points.map(([px, py]) => [el.x + px, el.y + py]);
 }
 
 // Copy with positive width and height, to draw while dragging in any direction

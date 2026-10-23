@@ -10,10 +10,16 @@
   <body>
     <div id="toolbar" class="toolbar" role="toolbar" aria-label="Tools"></div>
     <canvas id="board"></canvas>
+    <button id="delete-selection" class="floating-btn" title="Delete" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+      </svg>
+    </button>
 
     <!-- Classic scripts (no modules) so it works when opening the file directly -->
     <script src="js/elements.js"></script>
     <script src="js/shapes.js"></script>
+    <script src="js/geometry.js"></script>
     <script src="js/sketch.js"></script>
     <script src="js/renderer.js"></script>
     <script src="js/textEditor.js"></script>
