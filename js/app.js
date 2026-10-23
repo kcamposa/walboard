@@ -35,6 +35,13 @@ window.WB = window.WB || {};
   };
   let renderQueued = false; // declared before the toolbar, which triggers a render when created
 
+  // Restore the drawing kept by the automatic save, if any
+  const autosaved = WB.loadAutosave();
+  if (autosaved) {
+    state.elements = autosaved.elements;
+    if (autosaved.view) Object.assign(WB.view, autosaved.view);
+  }
+
   const history = WB.createHistory(state.elements);
   const undoButton = document.getElementById("undo");
   const redoButton = document.getElementById("redo");
@@ -43,6 +50,7 @@ window.WB = window.WB || {};
   function recordHistory() {
     history.record(state.elements);
     updateHistoryButtons();
+    WB.autosave(state.elements, WB.view);
   }
 
   function updateHistoryButtons() {
@@ -55,6 +63,7 @@ window.WB = window.WB || {};
     // Keep only the selected elements that still exist
     state.selectedIds = new Set(elements.filter((el) => state.selectedIds.has(el.id)).map((el) => el.id));
     updateHistoryButtons();
+    WB.autosave(state.elements, WB.view);
     requestRender();
   }
 
@@ -109,8 +118,12 @@ window.WB = window.WB || {};
     WB.view.zoom = newZoom;
     WB.view.x = sceneX - screenX / newZoom;
     WB.view.y = sceneY - screenY / newZoom;
-    zoomLabel.textContent = `${Math.round(newZoom * 100)}%`;
+    updateZoomLabel();
     requestRender();
+  }
+
+  function updateZoomLabel() {
+    zoomLabel.textContent = `${Math.round(WB.view.zoom * 100)}%`;
   }
 
   // Mouse wheel / two fingers on the trackpad move the canvas; pinching on the trackpad zooms
@@ -347,6 +360,32 @@ window.WB = window.WB || {};
     requestRender();
   });
 
+  // ---- Files ----
+
+  document.getElementById("save-file").addEventListener("click", () => {
+    WB.saveSceneFile(WB.serializeScene(state.elements, WB.view));
+  });
+
+  // Opening a file replaces the drawing; it can be undone like any other change
+  document.getElementById("open-file").addEventListener("click", async () => {
+    const text = await WB.openSceneFile();
+    if (text === null) return;
+    let scene;
+    try {
+      scene = WB.parseScene(text);
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
+    if (state.textEditor) state.textEditor.commit();
+    state.elements = scene.elements;
+    state.selectedIds.clear();
+    if (scene.view) Object.assign(WB.view, scene.view);
+    updateZoomLabel();
+    recordHistory();
+    requestRender();
+  });
+
   // ---- Text ----
 
   // Clicking on an existing text edits it; anywhere else starts a new text.
@@ -448,6 +487,7 @@ window.WB = window.WB || {};
   }
 
   window.addEventListener("resize", resize);
+  updateZoomLabel();
   resize();
 
   // The canvas does not wait for fonts: it re-renders once they finish loading
