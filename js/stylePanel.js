@@ -1,8 +1,18 @@
 // Style panel: stroke and background colors, for the next shape or for the selected ones.
 window.WB = window.WB || {};
 
-WB.STROKE_COLORS = ["#1f1f1f", "#6b7280", "#d64545", "#e8890c", "#2e9d4f", "#0f766e", "#2563c9", "#7c4dd6"];
-WB.FILL_COLORS = ["transparent", "#fde2e2", "#fdf0a0", "#d6f5dd", "#d4e8fb", "#e6dcfb", "#ececea"];
+// Palettes: neutrals first, then the hues in rainbow order. 14 colors + the custom one = 3 rows of 5
+WB.STROKE_COLORS = [
+  "#1f1f1f", "#4b5563", "#9ca3af", "#d64545", "#db2777",
+  "#e8890c", "#c99a06", "#8b5e34", "#2e9d4f", "#0f766e",
+  "#0891b2", "#2563c9", "#4338ca", "#7c4dd6",
+];
+// Soft tones that keep dark text readable on top
+WB.FILL_COLORS = [
+  "transparent", "#ffffff", "#ececea", "#fde2e2", "#fce7f3",
+  "#ffe8cc", "#fdf0a0", "#f3e4d3", "#d6f5dd", "#ccf0eb",
+  "#cff1f8", "#d4e8fb", "#e0e1fb", "#e6dcfb",
+];
 
 // "#2563c9", "2563c9" or the short "#f0a" → "#2563c9" / "#ff00aa"; anything else → null
 function normalizeHex(text) {
