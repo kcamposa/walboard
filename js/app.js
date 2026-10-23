@@ -80,10 +80,20 @@ window.WB = window.WB || {};
   });
 
   // Esc goes back to the Select tool (the only keyboard shortcut, asked for explicitly).
-  // A shape still being dragged is discarded. Ignored while typing in a text field
+  // A shape still being dragged is discarded. While typing on the canvas, the text is kept and selected.
+  // Ignored in the other text fields (search, rename, hex code)
   window.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape" || state.tool === "select") return;
-    if (e.target.closest("input, textarea, [contenteditable]")) return;
+    if (e.key !== "Escape") return;
+    const typingOnCanvas = state.textEditor && e.target.classList.contains("text-editor");
+    if (typingOnCanvas) {
+      const el = state.editingElement;
+      state.textEditor.commit();
+      toolbar.setActive("select");
+      if (state.elements.includes(el)) state.selectedIds = new Set([el.id]);
+      requestRender();
+      return;
+    }
+    if (state.tool === "select" || e.target.closest("input, textarea, [contenteditable]")) return;
     state.drawing = null;
     toolbar.setActive("select");
   });
