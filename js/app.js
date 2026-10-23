@@ -72,11 +72,20 @@ window.WB = window.WB || {};
   undoButton.addEventListener("click", () => restore(history.undo()));
   redoButton.addEventListener("click", () => restore(history.redo()));
 
-  WB.createToolbar(document.getElementById("toolbar"), (tool) => {
+  const toolbar = WB.createToolbar(document.getElementById("toolbar"), (tool) => {
     state.tool = tool;
     canvas.style.cursor = toolCursor();
     if (tool !== "select") state.selectedIds.clear();
     requestRender();
+  });
+
+  // Esc goes back to the Select tool (the only keyboard shortcut, asked for explicitly).
+  // A shape still being dragged is discarded. Ignored while typing in a text field
+  window.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || state.tool === "select") return;
+    if (e.target.closest("input, textarea, [contenteditable]")) return;
+    state.drawing = null;
+    toolbar.setActive("select");
   });
 
   function toolCursor() {
