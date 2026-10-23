@@ -48,6 +48,7 @@ WB.createSidebar = function (container, handlers) {
   function createItem(c) {
     const item = document.createElement("div");
     item.className = c.id === currentId ? "canvas-item active" : "canvas-item";
+    item.dataset.id = c.id;
     item.innerHTML = `
       <div class="canvas-info">
         <div class="canvas-name"></div>
@@ -103,6 +104,16 @@ WB.createSidebar = function (container, handlers) {
       canvases = list;
       currentId = activeId;
       draw();
+    },
+    // Opens the name field of a canvas (used right after creating one)
+    rename(id) {
+      if (search.value) {
+        search.value = "";
+        draw();
+      }
+      const c = canvases.find((item) => item.id === id);
+      const item = [...listEl.children].find((el) => el.dataset.id === id);
+      if (c && item) startRename(c, item.querySelector(".canvas-name"));
     },
   };
 };

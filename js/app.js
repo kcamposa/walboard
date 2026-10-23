@@ -406,9 +406,12 @@ window.WB = window.WB || {};
   // ---- Canvases ----
 
   const sidebar = WB.createSidebar(document.getElementById("sidebar"), {
+    // A new canvas opens with its name field ready to type
     onCreate() {
       leaveCanvas();
-      openCanvas(store.create().id);
+      const { id } = store.create();
+      openCanvas(id);
+      sidebar.rename(id);
     },
     onSelect(id) {
       leaveCanvas();
