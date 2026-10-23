@@ -8,7 +8,7 @@
   --accent-soft: #ccfbf1;
   /* Font for the whole tool; fallbacks are handwritten system fonts */
   --font-hand: "Excalifont", "Segoe Print", "Chalkboard", "Bradley Hand", cursive;
-  --sidebar-width: 260px;
+  --sidebar-width: 280px;
 }
 
 body.sidebar-hidden {
@@ -354,6 +354,9 @@ body.sidebar-hidden .sidebar {
 }
 
 .canvas-time {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: 12px;
   opacity: 0.55;
 }

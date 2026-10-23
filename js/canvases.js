@@ -1,5 +1,5 @@
 // Canvas store: keeps every canvas in the browser (localStorage).
-//   walboard:canvases      → list of { id, name, updatedAt }
+//   walboard:canvases      → list of { id, name, createdAt, updatedAt }
 //   walboard:canvas:<id>   → the canvas drawing, in the same format as a .walboard file
 //   walboard:current       → id of the open canvas
 // If the browser blocks storage (private mode, blocked site data), canvases live in memory
@@ -58,6 +58,11 @@ function nextUntitledName(list) {
   return `Untitled ${n}`;
 }
 
+// Creation time of a canvas. Canvases made before createdAt existed have it inside their id
+WB.canvasCreatedAt = function (meta) {
+  return meta.createdAt || parseInt(meta.id.split("-")[1], 36) || meta.updatedAt;
+};
+
 WB.canvasStore = {
   // Canvases, most recently edited first
   list() {
@@ -68,13 +73,15 @@ WB.canvasStore = {
     return readIndex().find((c) => c.id === id) || null;
   },
 
-  // Creates a canvas (empty, or with the given scene) and returns its { id, name, updatedAt }
+  // Creates a canvas (empty, or with the given scene) and returns its { id, name, createdAt, updatedAt }
   create(name, scene) {
     const list = readIndex();
+    const now = Date.now();
     const meta = {
-      id: `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+      id: `c-${now.toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
       name: name || nextUntitledName(list),
-      updatedAt: Date.now(),
+      createdAt: now,
+      updatedAt: now,
     };
     writeIndex([...list, meta]);
     const content = scene || { elements: [], view: null };

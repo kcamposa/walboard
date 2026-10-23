@@ -18,6 +18,14 @@ function timeAgo(timestamp) {
   return new Date(timestamp).toLocaleDateString();
 }
 
+// "Oct 23", with the year when it is not the current one
+function shortDate(timestamp) {
+  const date = new Date(timestamp);
+  const options = { month: "short", day: "numeric" };
+  if (date.getFullYear() !== new Date().getFullYear()) options.year = "numeric";
+  return date.toLocaleDateString("en-US", options);
+}
+
 // handlers: { onCreate(), onSelect(id), onRename(id, name), onDelete(id) }
 WB.createSidebar = function (container, handlers) {
   container.innerHTML = `
@@ -52,7 +60,7 @@ WB.createSidebar = function (container, handlers) {
     item.innerHTML = `
       <div class="canvas-info">
         <div class="canvas-name"></div>
-        <div class="canvas-time">${timeAgo(c.updatedAt)}</div>
+        <div class="canvas-time">Created ${shortDate(WB.canvasCreatedAt(c))} · edited ${timeAgo(c.updatedAt)}</div>
       </div>
       <button class="canvas-action" type="button" title="Rename">${sidebarIcon(ICON_RENAME)}</button>
       <button class="canvas-action danger" type="button" title="Delete">${sidebarIcon(ICON_DELETE)}</button>
